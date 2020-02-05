@@ -25,7 +25,11 @@ exports.build = function() {
 
   const jobsInProcess = new Map()
   const gatsbyProcess = cp.fork(`${process.cwd()}/node_modules/.bin/gatsby`, ['build']);
-  const pubSubClient = new PubSub();
+
+  const config = JSON.parse(fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS))
+  const pubSubClient = new PubSub({
+    projectId: config.project_id
+  });
 
   const subName = `nf-sub-${new Date().getTime()}`
 
