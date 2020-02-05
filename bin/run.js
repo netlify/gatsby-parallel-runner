@@ -3,15 +3,13 @@
 const { build } = require('../src/build')
 const { deploy } = require('../src/deploy')
 
-if (!process.env.TOPIC) {
-  console.error("You must set a TOPIC environment variable")
-  process.exit(1)
-}
-
-if (!process.env.WORKER_TOPIC) {
-  console.error("You must set a WORKER_TOPIC environment variable")
-  process.exit(1)
-}
+const requiredEnvVars = ['TOPIC', 'WORKER_TOPIC', 'GOOGLE_APPLICATION_CREDENTIALS']
+requiredEnvVars.forEach(key => {
+  if (!process.env[key]) {
+    console.error(`You must set a ${key} environment variable`)
+    process.exit(1)
+  }
+})
 
 if (process.argv.length === 3 && process.argv[2] === 'deploy') {
   console.log("Deploying Cloud Worker")
