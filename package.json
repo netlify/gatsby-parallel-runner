@@ -1,0 +1,16 @@
+{
+  "name": "gatsby-parallel-runner",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "bin": {
+    "gatsby-parallel-runner": "./bin/run.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/pubsub": "^0.29.1",
+    "fs-extra": "^8.1.0",
+    "grpc": "^1.24.2"
+  }
+}
