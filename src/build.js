@@ -43,12 +43,12 @@ exports.build = function() {
     try {
       await pubSubClient.createTopic(process.env.TOPIC)
     } catch(err) {
-      console.log("Create topic failed", err)
+      // console.log("Create topic failed", err)
     }
     try {
       await pubSubClient.createTopic(process.env.WORKER_TOPIC)
     } catch(err) {
-      console.log("Create topic failed", err)
+      // console.log("Create topic failed", err)
     }
     const [subscription] = await pubSubClient.topic(process.env.TOPIC).createSubscription(subName);
     console.log(`Subscription ${subName} created.`);
@@ -102,6 +102,7 @@ exports.build = function() {
 
     const file = msg.inputPaths[0].path
     const data = await fs.readFile(file)
+    console.log("Processing image in cloud function", file)
     jobsInProcess.set(msg.id, async (result) => {
       try {
         await Promise.all(result.output.map(async (transform) => {
@@ -117,6 +118,7 @@ exports.build = function() {
           }
         })
         jobsInProcess.delete(msg.id)
+        console.log("File processed by cloud function", file)
       } catch (err) {
         console.error("Failed to execute callback", err)
       }

@@ -1,5 +1,5 @@
 {
-  "name": "gatsby-image-processing-google-functions-test",
+  "name": "cloud_sharp_processor",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",

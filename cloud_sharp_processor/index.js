@@ -6,7 +6,7 @@ const pubSubClient = new PubSub();
 
 process.chdir('/tmp')
 
-exports.helloPubSub = async (msg, context) => {
+exports.gatsbySharpProcessor = async (msg, context) => {
   const pubSubMessage = JSON.parse(Buffer.from(msg.data, 'base64').toString());
   const file = Buffer.from(pubSubMessage.file)
 
