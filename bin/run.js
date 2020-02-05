@@ -21,7 +21,7 @@ if (!process.env.GOOGLE_APPLICATION_CREDENTIALS.match(/\.json$/)) {
     console.error("GOOGLE_APPLICATION_CREDENTIALS must either be a path to a .json file or base 64 encoded json credentials")
     process.exit(1)
   }
-  false.writeFileSync(credentialsFile, credentials)
+  writeFileSync(credentialsFile, credentials)
   process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsFile
 }
 
