@@ -21,7 +21,7 @@ npm i gatsby-parallel-runner
 ```
 
 
-Set relevant env variables in your shell
+Set relevant env variables in your shell:
 
 ```
 export GOOGLE_APPLICATION_CREDENTIALS=~/path/to/your/google-credentials.json
@@ -29,16 +29,15 @@ export TOPIC=parallel-runner-topic
 export WORKER_TOPIC=function-worker-topic
 ```
 
-Deploy the cloud function
+Deploy the cloud function:
 
 ```
-npm run deploy-sharp-worker
-
+./node_modules/.bin/gatsby-parallel-runner deploy
 
 ```
 
+To run a Gatsby build:
 
-gatsby-parallel-runner
 ```
-
-From within your gatsby project.
+./node_modules/.bin/gatsby-parallel-runner
+```
