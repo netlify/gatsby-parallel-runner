@@ -42,7 +42,7 @@ exports.build = function() {
       case MESSAGE_TYPES.JOB_COMPLETED:
         if (jobsInProcess.has(pubSubMessage.payload.id)) {
           const callback = jobsInProcess.get(pubSubMessage.payload.id)
-          callback(pubSubMessage)
+          callback(pubSubMessage.payload)
         }
         return
       case MESSAGE_TYPES.JOB_FAILED:
@@ -148,19 +148,21 @@ exports.build = function() {
         id: msg.id
       }))
       await pubSubClient.topic(process.env.WORKER_TOPIC).publish(pubsubMsg);
-      setTimeout(MAX_JOB_TIME, () => {
-        console.log("Timing out job for file", file)
-        jobsInProcess.delete(msg.id)
-        gatsbyProcess.send({
-          type: MESSAGE_TYPES.JOB_FAILED,
-          payload: {
-            id: msg.id,
-            error: `File failed to process with timeout ${file}`
-          }
-        })
-      })
+      setTimeout(() => {
+        if (jobsInProcess.has(msg.id)) {
+          console.log("Timing out job for file", file)
+          jobsInProcess.delete(msg.id)
+          gatsbyProcess.send({
+            type: MESSAGE_TYPES.JOB_FAILED,
+            payload: {
+              id: msg.id,
+              error: `File failed to process with timeout ${file}`
+            }
+          })
+        }
+      }, MAX_JOB_TIME)
     } catch(err) {
-      console.error("Error during pubblish: ", err)
+      console.error("Error during publish: ", err)
     }
   }
 }
