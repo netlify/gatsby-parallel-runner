@@ -112,7 +112,7 @@ exports.build = function() {
         await Promise.all(result.output.map(async (transform) => {
           const filePath = path.join(msg.outputDir, transform.outputPath)
           await fs.mkdirp(path.dirname(filePath))
-          return fs.writeFile(filePath, Buffer.from(transform.data))
+          return fs.writeFile(filePath, Buffer.from(transform.data, 'base64'))
         }))
         gatsbyProcess.send({
           type: MESSAGE_TYPES.JOB_COMPLETED,

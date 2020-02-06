@@ -22,7 +22,7 @@ exports.gatsbySharpProcessor = async (msg, context) => {
     await Promise.all(tranforms.map(t => new Promise((resolve, reject) => {
       fs.readFile(t.outputPath, (err, data) => {
         if (err) { reject(err); }
-        result.output.push({...t, data: data.toString()})
+        result.output.push({...t, data: data.toString('base64')})
         resolve(true)
       })
     })))

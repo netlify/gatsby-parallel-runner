@@ -11,7 +11,7 @@ exports.deploy = async function() {
     const config = JSON.parse(creds)
 
     const ps = spawn('gcloud', [
-      'functions', 'deploy', 'gatsbySharpProcessor', `--service-account=${config.client_email}`, '--project', config.project_id, '--runtime', 'nodejs10', '--verbosity', 'debug', '--trigger-topic', process.env.WORKER_TOPIC
+      'functions', 'deploy', 'gatsbySharpProcessor', '--memory', '1024MB', `--service-account=${config.client_email}`, '--project', config.project_id, '--runtime', 'nodejs10', '--verbosity', 'debug', '--trigger-topic', process.env.WORKER_TOPIC
     ], {
       shell: true,
       cwd,
