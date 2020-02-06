@@ -21,6 +21,8 @@ exports.build = function() {
     IMAGE_PROCESSING: processImage
   }
 
+  const MAX_JOB_TIME = 60 * 1000 // 60 seconds timeout
+
   process.env.ENABLE_GATSBY_EXTERNAL_JOBS = true
 
   const jobsInProcess = new Map()
@@ -36,10 +38,23 @@ exports.build = function() {
   function pubsubMessageHandler(msg) {
     msg.ack()
     const pubSubMessage = JSON.parse(Buffer.from(msg.data, 'base64').toString());
-    if (jobsInProcess.has(pubSubMessage.id)) {
-      const callback = jobsInProcess.get(pubSubMessage.id)
-      callback(pubSubMessage)
+    switch (pubSubMessage.type) {
+      case MESSAGE_TYPES.JOB_COMPLETED:
+        if (jobsInProcess.has(pubSubMessage.payload.id)) {
+          const callback = jobsInProcess.get(pubSubMessage.payload.id)
+          callback(pubSubMessage)
+        }
+        return
+      case MESSAGE_TYPES.JOB_FAILED:
+        gatsbyProcess.send({
+          type: MESSAGE_TYPES.JOB_FAILED,
+          payload: pubSubMessage.payload
+        })
+        return
+      default:
+        console.error("Unkown worker message: ", msg)
     }
+
   }
 
   async function createSubscription() {
@@ -106,7 +121,6 @@ exports.build = function() {
 
     const file = msg.inputPaths[0].path
     const data = await fs.readFile(file)
-    console.log("Processing image in cloud function", file)
     jobsInProcess.set(msg.id, async (result) => {
       try {
         await Promise.all(result.output.map(async (transform) => {
@@ -122,7 +136,6 @@ exports.build = function() {
           }
         })
         jobsInProcess.delete(msg.id)
-        console.log("File processed by cloud function", file)
       } catch (err) {
         console.error("Failed to execute callback", err)
       }
@@ -135,6 +148,17 @@ exports.build = function() {
         id: msg.id
       }))
       await pubSubClient.topic(process.env.WORKER_TOPIC).publish(pubsubMsg);
+      setTimeout(MAX_JOB_TIME, () => {
+        console.log("Timing out job for file", file)
+        jobsInProcess.delete(msg.id)
+        gatsbyProcess.send({
+          type: MESSAGE_TYPES.JOB_FAILED,
+          payload: {
+            id: msg.id,
+            error: `File failed to process with timeout ${file}`
+          }
+        })
+      })
     } catch(err) {
       console.error("Error during pubblish: ", err)
     }
