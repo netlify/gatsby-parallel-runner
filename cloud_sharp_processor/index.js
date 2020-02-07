@@ -22,7 +22,7 @@ async function processPubSubMessageOrStorageObject(msg) {
 exports.gatsbySharpProcessor = async (msg, context) => {
   const event = await processPubSubMessageOrStorageObject(msg)
   try {
-    const file = event.file
+    const file = Buffer.from(event.file)
     const results = processFile(file, event.action.operations, event.action.pluginOptions)
     const tranforms = await Promise.all(results)
 

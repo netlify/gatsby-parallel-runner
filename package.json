@@ -1,6 +1,6 @@
 {
   "name": "gatsby-parallel-runner",
-  "version": "1.0.9",
+  "version": "1.0.12",
   "description": "",
   "main": "index.js",
   "bin": {

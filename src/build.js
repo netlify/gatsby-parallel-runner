@@ -53,10 +53,13 @@ exports.build = function() {
         }
         return
       case MESSAGE_TYPES.JOB_FAILED:
-        gatsbyProcess.send({
-          type: MESSAGE_TYPES.JOB_FAILED,
-          payload: pubSubMessage.payload
-        })
+        if (jobsInProcess.has(pubSubMessage.payload.id)) {
+          jobsInProcess.delete(pubSubMessage.payload.id)
+          gatsbyProcess.send({
+            type: MESSAGE_TYPES.JOB_FAILED,
+            payload: pubSubMessage.payload
+          })
+        }
         return
       default:
         console.error("Unkown worker message: ", msg)
@@ -73,12 +76,10 @@ exports.build = function() {
     }
 
     const [subscription] = await pubSubClient.topic(process.env.TOPIC).createSubscription(subName);
-    console.log(`Subscription ${subName} created.`);
 
     subscription.on('message', pubsubMessageHandler);
 
     gatsbyProcess.on('exit', async (code) => {
-      console.log(`Gatsby exited with code ${code}`);
       subscription.removeListener('message', pubsubMessageHandler);
       process.exit(code)
     });
@@ -150,20 +151,11 @@ exports.build = function() {
         topic: process.env.TOPIC,
         id: msg.id
       }))
-      if (pubSubMessage.length < MAX_PUB_SUB_SIZE) {
+      if (pubsubMsg.length < MAX_PUB_SUB_SIZE) {
         await pubSubClient.topic(process.env.WORKER_TOPIC).publish(pubsubMsg);
       } else {
-        await storage.bucket(bucketName).file(`event-${id}`, {
-        // By setting the option `destination`, you can change the name of the
-        // object you are uploading to a bucket.
-        metadata: {
-          // Enable long-lived HTTP caching headers
-          // Use only if the contents of the file will never change
-          // (If the contents will change, use cacheControl: 'no-cache')
-        cacheControl: 'public, max-age=31536000',
-      },
-    });
-
+        console.log("Publishing msg to storage", msg.id)
+        await storage.bucket(bucketName).file(`event-${id}`).save(pubsubMsg);
       }
 
       setTimeout(() => {
