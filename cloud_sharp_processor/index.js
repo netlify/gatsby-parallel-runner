@@ -2,16 +2,23 @@ const fs = require('fs-extra')
 const path = require('path')
 const { processFile } = require('gatsby-plugin-sharp/process-file')
 const {PubSub} = require('@google-cloud/pubsub');
+const {Storage} = require('@google-cloud/storage');
 
 const pubSubClient = new PubSub();
+const storageClient = new Storage();
 
 process.chdir('/tmp')
 
 async function processPubSubMessageOrStorageObject(msg) {
   let data = null
 
-  if (msg.download) {
-    data = await msg.download()
+  console.log(`Got msg: ${JSON.stringify(msg)}`)
+
+  if (msg.bucket && msg.name) {
+    const bucket = storageClient.bucket(msg.bucket)
+    const file = bucket.file(msg.name)
+    await file.download({destination: `/tmp/${msg.name}`})
+    data = (await fs.readFile(`/tmp/${msg.name}`)).toString()
   } else {
     data = msg.data
   }

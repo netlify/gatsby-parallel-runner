@@ -154,8 +154,7 @@ exports.build = function() {
       if (pubsubMsg.length < MAX_PUB_SUB_SIZE) {
         await pubSubClient.topic(process.env.WORKER_TOPIC).publish(pubsubMsg);
       } else {
-        console.log("Publishing msg to storage", file, pubsubMsg.length)
-        await storage.bucket(bucketName).file(`event-${msg.id}`).save(pubsubMsg);
+        await storage.bucket(bucketName).file(`event-${msg.id}`).save(pubsubMsg.toString('base64'));
       }
 
       setTimeout(() => {

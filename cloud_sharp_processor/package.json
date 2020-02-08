@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@google-cloud/pubsub": "^1.4.1",
+    "@google-cloud/storage": "^4.3.0",
     "fs-extra": "^8.1.0",
     "gatsby-plugin-sharp": "^2.4.5"
   }
