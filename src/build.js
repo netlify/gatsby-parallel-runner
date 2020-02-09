@@ -22,7 +22,7 @@ exports.build = function() {
     IMAGE_PROCESSING: processImage
   }
 
-  const MAX_JOB_TIME = 60 * 1000 // 60 seconds timeout
+  const MAX_JOB_TIME = 60000 // 60 seconds timeout
   const MAX_PUB_SUB_SIZE = 1024 * 1024 * 5 // 5 Megabyte
 
   process.env.ENABLE_GATSBY_EXTERNAL_JOBS = true
