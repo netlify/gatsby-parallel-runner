@@ -3,10 +3,13 @@
 const cp = require('child_process')
 const path = require('path')
 const fs = require('fs-extra')
+const log = require('loglevel')
 const { PubSub } = require('@google-cloud/pubsub')
 const { Storage } = require('@google-cloud/storage')
 
 exports.build = function() {
+  log.setLevel(process.env.PARALLEL_RUNNER_LOG_LEVEL || 'warn')
+
   const MESSAGE_TYPES = {
     LOG_ACTION: `LOG_ACTION`,
     JOB_CREATED: `JOB_CREATED`,
@@ -45,6 +48,7 @@ exports.build = function() {
   function pubsubMessageHandler(msg) {
     msg.ack()
     const pubSubMessage = JSON.parse(Buffer.from(msg.data, 'base64').toString());
+    log.trace("Got worker message", pubSubMessage)
     switch (pubSubMessage.type) {
       case MESSAGE_TYPES.JOB_COMPLETED:
         if (jobsInProcess.has(pubSubMessage.payload.id)) {
@@ -62,7 +66,7 @@ exports.build = function() {
         }
         return
       default:
-        console.error("Unkown worker message: ", msg)
+        log.error("Unkown worker message: ", msg)
     }
 
   }
@@ -72,7 +76,7 @@ exports.build = function() {
     try {
       await pubSubClient.createTopic(process.env.TOPIC)
     } catch(err) {
-      // console.log("Create topic failed", err)
+      log.debug("Create topic failed", err)
     }
 
     const [subscription] = await pubSubClient.topic(process.env.TOPIC).createSubscription(subName);
@@ -85,9 +89,10 @@ exports.build = function() {
     });
   }
 
-  createSubscription().catch(console.error);
+  createSubscription().catch(log.error);
 
   gatsbyProcess.on('message', (msg) => {
+    log.trace("Got gatsby message", msg)
     switch (msg.type) {
       case MESSAGE_TYPES.JOB_CREATED: {
         if (JOB_TYPES[msg.payload.name]) {
@@ -103,16 +108,16 @@ exports.build = function() {
         break
       }
       case MESSAGE_TYPES.LOG_ACTION:
-        msg.action.payload.text && console.log(msg.action.payload.text)
+        // msg.action.payload.text && console.log(msg.action.payload.text)
         break
       default:
-        console.log("Ignoring message: ", msg)
+        log.warn("Ignoring message: ", msg)
     }
   });
 
   async function processImage(msg) {
     if (!msg.inputPaths || msg.inputPaths.length > 1) {
-      console.error("Wrong number of input paths in msg: ", msg)
+      log.error("Wrong number of input paths in msg: ", msg)
       gatsbyProcess.send({
         type: MESSAGE_TYPES.JOB_FAILED,
         payload: {
@@ -126,6 +131,7 @@ exports.build = function() {
     const file = msg.inputPaths[0].path
     const data = await fs.readFile(file)
     jobsInProcess.set(msg.id, async (result) => {
+      log.trace("Finalizing for", file, msg.id)
       try {
         await Promise.all(result.output.map(async (transform) => {
           const filePath = path.join(msg.outputDir, transform.outputPath)
@@ -141,7 +147,7 @@ exports.build = function() {
         })
         jobsInProcess.delete(msg.id)
       } catch (err) {
-        console.error("Failed to execute callback", err)
+        log.error("Failed to execute callback", err)
       }
     })
     try {
@@ -152,14 +158,17 @@ exports.build = function() {
         id: msg.id
       }))
       if (pubsubMsg.length < MAX_PUB_SUB_SIZE) {
+        log.trace("Publishing to message queue", file, msg.id)
         await pubSubClient.topic(process.env.WORKER_TOPIC).publish(pubsubMsg);
       } else {
+        log.trace("Publishing to storage queue", file, msg.id)
         await storage.bucket(bucketName).file(`event-${msg.id}`).save(pubsubMsg.toString('base64'));
       }
 
       setTimeout(() => {
+        log.trace("Checking timeout for", file, msg.id)
         if (jobsInProcess.has(msg.id)) {
-          console.log("Timing out job for file", file)
+          log.error("Timing out job for file", file, msg.id)
           jobsInProcess.delete(msg.id)
           gatsbyProcess.send({
             type: MESSAGE_TYPES.JOB_FAILED,
@@ -171,7 +180,7 @@ exports.build = function() {
         }
       }, MAX_JOB_TIME)
     } catch(err) {
-      console.error("Error during publish: ", err)
+      log.error("Error during publish: ", err)
     }
   }
 }
