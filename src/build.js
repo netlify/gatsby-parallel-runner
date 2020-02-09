@@ -25,7 +25,8 @@ exports.build = function() {
     IMAGE_PROCESSING: processImage
   }
 
-  const MAX_JOB_TIME = 60000 // 60 seconds timeout
+  // default 5 minute timeout
+  const MAX_JOB_TIME = process.env.PARALLEL_RUNNER_TIMEOUT ? parseInt(process.env.PARALLEL_RUNNER_TIMEOUT, 10) : 5 * 60 * 1000
   const MAX_PUB_SUB_SIZE = 1024 * 1024 * 5 // 5 Megabyte
 
   process.env.ENABLE_GATSBY_EXTERNAL_JOBS = true
@@ -158,10 +159,10 @@ exports.build = function() {
         id: msg.id
       }))
       if (pubsubMsg.length < MAX_PUB_SUB_SIZE) {
-        log.trace("Publishing to message queue", file, msg.id)
+        log.debug("Publishing to message queue", file, msg.id)
         await pubSubClient.topic(process.env.WORKER_TOPIC).publish(pubsubMsg);
       } else {
-        log.trace("Publishing to storage queue", file, msg.id)
+        log.debug("Publishing to storage queue", file, msg.id)
         await storage.bucket(bucketName).file(`event-${msg.id}`).save(pubsubMsg.toString('base64'));
       }
 
