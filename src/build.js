@@ -45,9 +45,9 @@ exports.build = function() {
     projectId: config.project_id
   });
 
-
   const subName = `nf-sub-${new Date().getTime()}`
   const bucketName = `event-processing-${process.env.WORKER_TOPIC}`
+  const resultBucketName = `event-results-${process.env.WORKER_TOPIC}`
 
   function failJob(id, error) {
     jobsInProcess.delete(id)
@@ -81,7 +81,6 @@ exports.build = function() {
       default:
         log.error("Unkown worker message: ", msg)
     }
-
   }
 
   function hasFreeMessageMem() {
@@ -124,7 +123,19 @@ exports.build = function() {
       log.trace("Finalizing for", file, msgId)
       jobsInProcess.delete(msgId)
       try {
-        await Promise.all(result.output.map(async (transform) => {
+        let output = null
+        if (result.storedResult) {
+          const bucket = storageClient.bucket(resultBucketName)
+          const file = bucket.file(result.storedResult)
+          await file.download({destination: `/tmp/result-${msgId}`})
+          const data = (await fs.readFile(`/tmp/result-${msgId}`)).toString()
+          output = JSON.parse(data).output
+          await fs.remove(`/tmp/result-${msgId}`)
+        } else {
+          output = result.output
+        }
+
+        await Promise.all(output.map(async (transform) => {
           const filePath = path.join(outputDir, transform.outputPath)
           await fs.mkdirp(path.dirname(filePath))
           return fs.writeFile(filePath, Buffer.from(transform.data, 'base64'))
@@ -133,7 +144,7 @@ exports.build = function() {
           type: MESSAGE_TYPES.JOB_COMPLETED,
           payload: {
             id: msgId,
-            result: {output: result.output.map(t => ({outputPath: t.outputPath, args: t.args}))}
+            result: {output: output.map(t => ({outputPath: t.outputPath, args: t.args}))}
           }
         })
       } catch (err) {
@@ -161,14 +172,16 @@ exports.build = function() {
       log.trace("Create topic failed", err)
     }
 
-    const [subscription] = await pubSubClient.topic(process.env.TOPIC).createSubscription(subName);
+    const [subscription] = await pubSubClient.topic(process.env.TOPIC).createSubscription(subName)
     log.debug("Got subscription: ", subscription)
 
-    subscription.on('message', pubsubMessageHandler);
+    subscription.on('message', pubsubMessageHandler)
+    subscription.on('error', (err) => log.error("Error from subscription: ", err))
+    subscription.on('close', (err) => log.error("Subscription closed unexpectedly", err))
 
     gatsbyProcess.on('exit', async (code) => {
       log.debug("Removing listener")
-      subscription.removeListener('message', pubsubMessageHandler);
+      subscription.removeListener('message', pubsubMessageHandler)
       process.exit(code)
     });
   }

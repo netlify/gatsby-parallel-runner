@@ -7,6 +7,7 @@ const { PubSub } = require('@google-cloud/pubsub')
 const { Storage } = require('@google-cloud/storage')
 
 const bucketName = `event-processing-${process.env.WORKER_TOPIC}`
+const resultBucketName = `event-results-${process.env.TOPIC}`
 
 function deployType(type, cwd, config) {
   return new Promise((resolve, reject) => {
@@ -67,6 +68,24 @@ exports.deploy = async function() {
     await bucket.setMetadata({lifeCycle});
   } catch(err) {
     console.log("Create bucket failed", err)
+  }
+
+  try {
+    const lifeCycle = `<?xml version="1.0" ?>
+    <LifecycleConfiguration>
+        <Rule>
+            <Action>
+                <Delete/>
+            </Action>
+            <Condition>
+                <Age>30</Age>
+            </Condition>
+        </Rule>
+    </LifecycleConfiguration>`
+    const [bucket] = await storage.createBucket(resultBucketName);
+    await bucket.setMetadata({lifeCycle});
+  } catch(err) {
+    console.log("Create result bucket failed", err)
   }
 
   try {
