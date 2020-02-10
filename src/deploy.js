@@ -12,7 +12,7 @@ function deployType(type, cwd, config) {
   return new Promise((resolve, reject) => {
     const args =[
       'functions', 'deploy', `gatsbySharpProcessor${type}`, '--entry-point', 'gatsbySharpProcessor', '--memory', '1024MB',
-      `--service-account=${config.client_email}`, '--project', config.project_id,
+      '--service-account', config.client_email, '--project', config.project_id,
       '--runtime', 'nodejs10', '--verbosity', 'debug'
     ]
     if (type === 'PubSub') {

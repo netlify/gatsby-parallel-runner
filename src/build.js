@@ -28,12 +28,12 @@ exports.build = function() {
   // default 5 minute timeout
   const MAX_JOB_TIME = process.env.PARALLEL_RUNNER_TIMEOUT ? parseInt(process.env.PARALLEL_RUNNER_TIMEOUT, 10) : 5 * 60 * 1000
   const MAX_PUB_SUB_SIZE = 1024 * 1024 * 5 // 5 Megabyte
-  const MAX_MEM_MESSAGE_MEM = 1024 * 1024 * 5 * 100 // 500 megabytes
+  const MAX_MEM_MESSAGE_MEM = 1024 * 1024 * 5 * 10 // 500 megabytes
 
   process.env.ENABLE_GATSBY_EXTERNAL_JOBS = true
 
   const jobsInProcess = new Map()
-  const gatsbyProcess = cp.fork(`${process.cwd()}/node_modules/.bin/gatsby`, ['build']);
+  const gatsbyProcess = cp.fork(`${process.cwd()}/node_modules/.bin/gatsby`, ['build'], {silent: true});
 
   let messageMemUsage = 0
 
@@ -62,9 +62,9 @@ exports.build = function() {
   function pubsubMessageHandler(msg) {
     msg.ack()
     const pubSubMessage = JSON.parse(Buffer.from(msg.data, 'base64').toString());
-    if (log.getLevel() <= log.levels.TRACE) {
-      log.trace("Got worker message", msg.id, pubSubMessage.type, pubSubMessage.payload && pubSubMessage.payload.id)
-    }
+    //if (log.getLevel() <= log.levels.TRACE) {
+      log.debug("Got worker message", msg.id, pubSubMessage.type, pubSubMessage.payload && pubSubMessage.payload.id)
+    //}
 
     switch (pubSubMessage.type) {
       case MESSAGE_TYPES.JOB_COMPLETED:
@@ -99,7 +99,9 @@ exports.build = function() {
   }
 
   async function pushToQueue(msg, file) {
+    const stat = await fs.stat(file)
     await waitForFreeMessageMem()
+    messageMemUsage += stat.size
     const data = await fs.readFile(file)
     const pubsubMsg = Buffer.from(JSON.stringify({
       file: data,
@@ -107,7 +109,6 @@ exports.build = function() {
       topic: process.env.TOPIC,
       id: msg.id
     }))
-    messageMemUsage += pubsubMsg.length
     if (pubsubMsg.length < MAX_PUB_SUB_SIZE) {
       log.debug("Publishing to message queue", file, msg.id)
       await pubSubClient.topic(process.env.WORKER_TOPIC).publish(pubsubMsg);
@@ -115,16 +116,16 @@ exports.build = function() {
       log.debug("Publishing to storage queue", file, msg.id)
       await storage.bucket(bucketName).file(`event-${msg.id}`).save(pubsubMsg.toString('base64'));
     }
-    messageMemUsage -= pubsubMsg.length
+    messageMemUsage -= stat.size
   }
 
-  async function finalizeJobHandler(msgId, file) {
+  function finalizeJobHandler(msgId, file, outputDir) {
     return async (result) => {
       log.trace("Finalizing for", file, msgId)
       jobsInProcess.delete(msgId)
       try {
         await Promise.all(result.output.map(async (transform) => {
-          const filePath = path.join(msg.outputDir, transform.outputPath)
+          const filePath = path.join(outputDir, transform.outputPath)
           await fs.mkdirp(path.dirname(filePath))
           return fs.writeFile(filePath, Buffer.from(transform.data, 'base64'))
         }))
@@ -142,10 +143,10 @@ exports.build = function() {
     }
   }
 
-  async function timeoutHandler(msgId, file) {
-    return () => {
+  function timeoutHandler(msgId, file) {
+    return function() {
       log.trace("Checking timeout for", file, msgId)
-      if (jobsInProcess.has(msg.id)) {
+      if (jobsInProcess.has(msgId)) {
         log.error("Timing out job for file", file, msgId)
         failJob(msgId, `File failed to process with timeout ${file}`)
       }
@@ -157,14 +158,16 @@ exports.build = function() {
     try {
       await pubSubClient.createTopic(process.env.TOPIC)
     } catch(err) {
-      log.debug("Create topic failed", err)
+      log.trace("Create topic failed", err)
     }
 
     const [subscription] = await pubSubClient.topic(process.env.TOPIC).createSubscription(subName);
+    log.debug("Got subscription: ", subscription)
 
     subscription.on('message', pubsubMessageHandler);
 
     gatsbyProcess.on('exit', async (code) => {
+      log.debug("Removing listener")
       subscription.removeListener('message', pubsubMessageHandler);
       process.exit(code)
     });
@@ -207,12 +210,13 @@ exports.build = function() {
 
     const file = msg.inputPaths[0].path
 
-    jobsInProcess.set(msg.id, finalizeJobHandler(msg.id, file))
+    jobsInProcess.set(msg.id, finalizeJobHandler(msg.id, file, msg.outputDir))
     try {
-      pushToQueue(msg, file)
+      await pushToQueue(msg, file)
       setTimeout(timeoutHandler(msg.id, file), MAX_JOB_TIME)
     } catch(err) {
       log.error("Error during publish: ", err)
+      failJob(msg.id, `Failed to publish job ${err}`)
     }
   }
 }

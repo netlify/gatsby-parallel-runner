@@ -45,8 +45,9 @@ exports.gatsbySharpProcessor = async (msg, context) => {
       const data = await fs.readFile(t.outputPath)
       result.payload.output.push({...t, data: data.toString('base64')})
     }))
-    const messageId = await pubSubClient.topic(event.topic).publish(Buffer.from(JSON.stringify(result)))
-    console.log("Published message ", messageId)
+    const resultMsg = Buffer.from(JSON.stringify(result))
+    const messageId = await pubSubClient.topic(event.topic).publish(resultMsg)
+    console.log("Published message ", messageId, resultMsg.length)
     await fs.emptyDir('/tmp')
   } catch (err) {
     const messageId = await pubSubClient.topic(event.topic).publish(Buffer.from(JSON.stringify({
