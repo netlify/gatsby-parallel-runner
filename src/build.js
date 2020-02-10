@@ -75,6 +75,23 @@ exports.build = function() {
 
   }
 
+  async function pushToQueue(msg, file) {
+    const data = await fs.readFile(file)
+    const pubsubMsg = Buffer.from(JSON.stringify({
+      file: data,
+      action: msg.args,
+      topic: process.env.TOPIC,
+      id: msg.id
+    }))
+    if (pubsubMsg.length < MAX_PUB_SUB_SIZE) {
+      log.debug("Publishing to message queue", file, msg.id)
+      await pubSubClient.topic(process.env.WORKER_TOPIC).publish(pubsubMsg);
+    } else {
+      log.debug("Publishing to storage queue", file, msg.id)
+      await storage.bucket(bucketName).file(`event-${msg.id}`).save(pubsubMsg.toString('base64'));
+    }
+  }
+
   async function createSubscription() {
     // Creates a new subscription
     try {
@@ -135,7 +152,7 @@ exports.build = function() {
     }
 
     const file = msg.inputPaths[0].path
-    const data = await fs.readFile(file)
+
     jobsInProcess.set(msg.id, async (result) => {
       log.trace("Finalizing for", file, msg.id)
       jobsInProcess.delete(msg.id)
@@ -164,20 +181,7 @@ exports.build = function() {
       }
     })
     try {
-      const pubsubMsg = Buffer.from(JSON.stringify({
-        file: data,
-        action: msg.args,
-        topic: process.env.TOPIC,
-        id: msg.id
-      }))
-      if (pubsubMsg.length < MAX_PUB_SUB_SIZE) {
-        log.debug("Publishing to message queue", file, msg.id)
-        await pubSubClient.topic(process.env.WORKER_TOPIC).publish(pubsubMsg);
-      } else {
-        log.debug("Publishing to storage queue", file, msg.id)
-        await storage.bucket(bucketName).file(`event-${msg.id}`).save(pubsubMsg.toString('base64'));
-      }
-
+      pushToQueue(msg, file)
       setTimeout(() => {
         log.trace("Checking timeout for", file, msg.id)
         if (jobsInProcess.has(msg.id)) {
