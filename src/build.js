@@ -49,7 +49,10 @@ exports.build = function() {
   function pubsubMessageHandler(msg) {
     msg.ack()
     const pubSubMessage = JSON.parse(Buffer.from(msg.data, 'base64').toString());
-    log.trace("Got worker message", pubSubMessage)
+    if (log.getLevel() <= log.levels.TRACE) {
+      log.trace("Got worker message", msg.id, pubsubMessage.type, pubsubMessage.payload && pubsubMessage.payload.id)
+    }
+
     switch (pubSubMessage.type) {
       case MESSAGE_TYPES.JOB_COMPLETED:
         if (jobsInProcess.has(pubSubMessage.payload.id)) {
@@ -93,7 +96,9 @@ exports.build = function() {
   createSubscription().catch(log.error);
 
   gatsbyProcess.on('message', (msg) => {
-    log.trace("Got gatsby message", msg)
+    if (log.getLevel() <= log.levels.TRACE && msg.type !== MESSAGE_TYPES.LOG_ACTION) {
+      log.trace("Got gatsby message", JSON.stringify(msg))
+    }
     switch (msg.type) {
       case MESSAGE_TYPES.JOB_CREATED: {
         if (JOB_TYPES[msg.payload.name]) {
@@ -133,6 +138,7 @@ exports.build = function() {
     const data = await fs.readFile(file)
     jobsInProcess.set(msg.id, async (result) => {
       log.trace("Finalizing for", file, msg.id)
+      jobsInProcess.delete(msg.id)
       try {
         await Promise.all(result.output.map(async (transform) => {
           const filePath = path.join(msg.outputDir, transform.outputPath)
@@ -146,9 +152,15 @@ exports.build = function() {
             result: {output: result.output.map(t => ({outputPath: t.outputPath, args: t.args}))}
           }
         })
-        jobsInProcess.delete(msg.id)
       } catch (err) {
         log.error("Failed to execute callback", err)
+        gatsbyProcess.send({
+          type: MESSAGE_TYPES.JOB_FAILED,
+          payload: {
+            id: msg.id,
+            error: `File failed to process result from ${file}: ${err}`
+          }
+        })
       }
     })
     try {
