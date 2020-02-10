@@ -125,7 +125,7 @@ exports.build = function() {
       try {
         let output = null
         if (result.storedResult) {
-          const bucket = storageClient.bucket(resultBucketName)
+          const bucket = storage.bucket(resultBucketName)
           const file = bucket.file(result.storedResult)
           await file.download({destination: `/tmp/result-${msgId}`})
           const data = (await fs.readFile(`/tmp/result-${msgId}`)).toString()
@@ -149,7 +149,7 @@ exports.build = function() {
         })
       } catch (err) {
         log.error("Failed to execute callback", err)
-        failJob(msg.id, `File failed to process result from ${file}: ${err}`)
+        failJob(msgId, `File failed to process result from ${file}: ${err}`)
       }
     }
   }
