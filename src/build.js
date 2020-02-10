@@ -46,11 +46,21 @@ exports.build = function() {
   const subName = `nf-sub-${new Date().getTime()}`
   const bucketName = `event-processing-${process.env.WORKER_TOPIC}`
 
+  function failJob(id, error) {
+    jobsInProcess.delete(id)
+    gatsbyProcess.send({
+      type: MESSAGE_TYPES.JOB_FAILED,
+      payload: {
+        id, error
+      }
+    })
+  }
+
   function pubsubMessageHandler(msg) {
     msg.ack()
     const pubSubMessage = JSON.parse(Buffer.from(msg.data, 'base64').toString());
     if (log.getLevel() <= log.levels.TRACE) {
-      log.trace("Got worker message", msg.id, pubsubMessage.type, pubsubMessage.payload && pubsubMessage.payload.id)
+      log.trace("Got worker message", msg.id, pubSubMessage.type, pubSubMessage.payload && pubSubMessage.payload.id)
     }
 
     switch (pubSubMessage.type) {
@@ -62,11 +72,7 @@ exports.build = function() {
         return
       case MESSAGE_TYPES.JOB_FAILED:
         if (jobsInProcess.has(pubSubMessage.payload.id)) {
-          jobsInProcess.delete(pubSubMessage.payload.id)
-          gatsbyProcess.send({
-            type: MESSAGE_TYPES.JOB_FAILED,
-            payload: pubSubMessage.payload
-          })
+          failJob(pubSubMessage.payload.id, pubSubMessage.payload.error)
         }
         return
       default:
@@ -89,6 +95,40 @@ exports.build = function() {
     } else {
       log.debug("Publishing to storage queue", file, msg.id)
       await storage.bucket(bucketName).file(`event-${msg.id}`).save(pubsubMsg.toString('base64'));
+    }
+  }
+
+  async function finalizeJobHandler(msgId, file) {
+    return async (result) => {
+      log.trace("Finalizing for", file, msgId)
+      jobsInProcess.delete(msgId)
+      try {
+        await Promise.all(result.output.map(async (transform) => {
+          const filePath = path.join(msg.outputDir, transform.outputPath)
+          await fs.mkdirp(path.dirname(filePath))
+          return fs.writeFile(filePath, Buffer.from(transform.data, 'base64'))
+        }))
+        gatsbyProcess.send({
+          type: MESSAGE_TYPES.JOB_COMPLETED,
+          payload: {
+            id: msgId,
+            result: {output: result.output.map(t => ({outputPath: t.outputPath, args: t.args}))}
+          }
+        })
+      } catch (err) {
+        log.error("Failed to execute callback", err)
+        failJob(msg.id, `File failed to process result from ${file}: ${err}`)
+      }
+    }
+  }
+
+  async function timeoutHandler(msgId, file) {
+    return () => {
+      log.trace("Checking timeout for", file, msgId)
+      if (jobsInProcess.has(msg.id)) {
+        log.error("Timing out job for file", file, msgId)
+        failJob(msgId, `File failed to process with timeout ${file}`)
+      }
     }
   }
 
@@ -141,61 +181,16 @@ exports.build = function() {
   async function processImage(msg) {
     if (!msg.inputPaths || msg.inputPaths.length > 1) {
       log.error("Wrong number of input paths in msg: ", msg)
-      gatsbyProcess.send({
-        type: MESSAGE_TYPES.JOB_FAILED,
-        payload: {
-          id: msg.id,
-          error: 'Wrong number of input paths'
-        }
-      })
+      failJob(msg.id, 'Wrong number of input paths')
       return
     }
 
     const file = msg.inputPaths[0].path
 
-    jobsInProcess.set(msg.id, async (result) => {
-      log.trace("Finalizing for", file, msg.id)
-      jobsInProcess.delete(msg.id)
-      try {
-        await Promise.all(result.output.map(async (transform) => {
-          const filePath = path.join(msg.outputDir, transform.outputPath)
-          await fs.mkdirp(path.dirname(filePath))
-          return fs.writeFile(filePath, Buffer.from(transform.data, 'base64'))
-        }))
-        gatsbyProcess.send({
-          type: MESSAGE_TYPES.JOB_COMPLETED,
-          payload: {
-            id: msg.id,
-            result: {output: result.output.map(t => ({outputPath: t.outputPath, args: t.args}))}
-          }
-        })
-      } catch (err) {
-        log.error("Failed to execute callback", err)
-        gatsbyProcess.send({
-          type: MESSAGE_TYPES.JOB_FAILED,
-          payload: {
-            id: msg.id,
-            error: `File failed to process result from ${file}: ${err}`
-          }
-        })
-      }
-    })
+    jobsInProcess.set(msg.id, finalizeJobHandler(msg.id, file))
     try {
       pushToQueue(msg, file)
-      setTimeout(() => {
-        log.trace("Checking timeout for", file, msg.id)
-        if (jobsInProcess.has(msg.id)) {
-          log.error("Timing out job for file", file, msg.id)
-          jobsInProcess.delete(msg.id)
-          gatsbyProcess.send({
-            type: MESSAGE_TYPES.JOB_FAILED,
-            payload: {
-              id: msg.id,
-              error: `File failed to process with timeout ${file}`
-            }
-          })
-        }
-      }, MAX_JOB_TIME)
+      setTimeout(timeoutHandler(msg.id, file), MAX_JOB_TIME)
     } catch(err) {
       log.error("Error during publish: ", err)
     }
