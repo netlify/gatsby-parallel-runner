@@ -28,11 +28,14 @@ exports.build = function() {
   // default 5 minute timeout
   const MAX_JOB_TIME = process.env.PARALLEL_RUNNER_TIMEOUT ? parseInt(process.env.PARALLEL_RUNNER_TIMEOUT, 10) : 5 * 60 * 1000
   const MAX_PUB_SUB_SIZE = 1024 * 1024 * 5 // 5 Megabyte
+  const MAX_MEM_MESSAGE_MEM = 1024 * 1024 * 5 * 100 // 500 megabytes
 
   process.env.ENABLE_GATSBY_EXTERNAL_JOBS = true
 
   const jobsInProcess = new Map()
   const gatsbyProcess = cp.fork(`${process.cwd()}/node_modules/.bin/gatsby`, ['build']);
+
+  let messageMemUsage = 0
 
   const config = JSON.parse(fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS))
   const pubSubClient = new PubSub({
@@ -81,7 +84,22 @@ exports.build = function() {
 
   }
 
+  function hasFreeMessageMem() {
+    return messageMemUsage < MAX_MEM_MESSAGE_MEM
+  }
+
+  async function waitForFreeMessageMem() {
+    return new Promise((resolve, reject) => {
+      const check = () => {
+        if (hasFreeMessageMem()) { return resolve() }
+        setTimeout(check, 200)
+      }
+      check()
+    })
+  }
+
   async function pushToQueue(msg, file) {
+    await waitForFreeMessageMem()
     const data = await fs.readFile(file)
     const pubsubMsg = Buffer.from(JSON.stringify({
       file: data,
@@ -89,6 +107,7 @@ exports.build = function() {
       topic: process.env.TOPIC,
       id: msg.id
     }))
+    messageMemUsage += pubsubMsg.length
     if (pubsubMsg.length < MAX_PUB_SUB_SIZE) {
       log.debug("Publishing to message queue", file, msg.id)
       await pubSubClient.topic(process.env.WORKER_TOPIC).publish(pubsubMsg);
@@ -96,6 +115,7 @@ exports.build = function() {
       log.debug("Publishing to storage queue", file, msg.id)
       await storage.bucket(bucketName).file(`event-${msg.id}`).save(pubsubMsg.toString('base64'));
     }
+    messageMemUsage -= pubsubMsg.length
   }
 
   async function finalizeJobHandler(msgId, file) {
