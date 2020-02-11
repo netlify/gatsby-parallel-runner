@@ -4,6 +4,8 @@ const { processFile } = require('gatsby-plugin-sharp/process-file')
 const {PubSub} = require('@google-cloud/pubsub');
 const {Storage} = require('@google-cloud/storage');
 
+const MAX_PUBSUB_RESPONSE_SIZE = 1024 * 1024 // 1mb
+
 const pubSubClient = new PubSub();
 const storageClient = new Storage();
 
@@ -53,7 +55,7 @@ exports.gatsbySharpProcessor = async (msg, context) => {
         id: event.id,
         output
       }
-      storageClient.bucket(`event-results-${event.topic}`).file(`result-${event.id}`).save(Buffer.from(JSON.stringify(storageResult)))
+      await storageClient.bucket(`event-results-${event.topic}`).file(`result-${event.id}`).save(Buffer.from(JSON.stringify(storageResult)))
       result.payload.storedResult = `result-${event.id}`
     } else {
       result.payload.output = output
@@ -61,7 +63,7 @@ exports.gatsbySharpProcessor = async (msg, context) => {
 
     const resultMsg = Buffer.from(JSON.stringify(result))
     const messageId = await pubSubClient.topic(event.topic).publish(resultMsg)
-    console.log("Published message ", messageId, resultMsg.length)
+    console.log("Published message ", messageId, resultMsg.length, result.payload.storedResult)
     await fs.emptyDir('/tmp')
   } catch (err) {
     const messageId = await pubSubClient.topic(event.topic).publish(Buffer.from(JSON.stringify({
@@ -71,7 +73,7 @@ exports.gatsbySharpProcessor = async (msg, context) => {
         error: err.toString()
       }
     })))
-    console.err("Failed to process message:", messageId, err)
+    console.error("Failed to process message:", messageId, err)
     await fs.emptyDir('/tmp')
   }
 };
