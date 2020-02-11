@@ -35,7 +35,7 @@ function deployType(type, cwd, config) {
 }
 
 exports.deploy = async function() {
-  const cwd = path.join(__dirname, '..', 'cloud_sharp_processor')
+  const cwd = path.join(__dirname, '..', 'cloud-sharp-processor')
   const creds = await readFile(process.env.GOOGLE_APPLICATION_CREDENTIALS)
   const config = JSON.parse(creds)
 
