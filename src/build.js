@@ -33,7 +33,7 @@ exports.build = function() {
   process.env.ENABLE_GATSBY_EXTERNAL_JOBS = true
 
   const jobsInProcess = new Map()
-  const gatsbyProcess = cp.fork(`${process.cwd()}/node_modules/.bin/gatsby`, ['build'], {silent: true});
+  const gatsbyProcess = cp.fork(`${process.cwd()}/node_modules/.bin/gatsby`, ['build']);
 
   let messageMemUsage = 0
 
@@ -47,7 +47,7 @@ exports.build = function() {
 
   const subName = `nf-sub-${new Date().getTime()}`
   const bucketName = `event-processing-${process.env.WORKER_TOPIC}`
-  const resultBucketName = `event-results-${process.env.WORKER_TOPIC}`
+  const resultBucketName = `event-results-${process.env.TOPIC}`
 
   function failJob(id, error) {
     jobsInProcess.delete(id)
