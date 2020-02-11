@@ -62,9 +62,9 @@ exports.build = function() {
   function pubsubMessageHandler(msg) {
     msg.ack()
     const pubSubMessage = JSON.parse(Buffer.from(msg.data, 'base64').toString());
-    //if (log.getLevel() <= log.levels.TRACE) {
-      log.debug("Got worker message", msg.id, pubSubMessage.type, pubSubMessage.payload && pubSubMessage.payload.id)
-    //}
+    if (log.getLevel() <= log.levels.TRACE) {
+      log.trace("Got worker message", msg.id, pubSubMessage.type, pubSubMessage.payload && pubSubMessage.payload.id)
+    }
 
     switch (pubSubMessage.type) {
       case MESSAGE_TYPES.JOB_COMPLETED:
