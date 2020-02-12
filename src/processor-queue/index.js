@@ -111,9 +111,11 @@ exports.initialize = async function() {
     subscription.on('message', pubsubMessageHandler)
     subscription.on('error', (err) => log.error("Error from subscription: ", err))
     subscription.on('close', (err) => log.error("Subscription closed unexpectedly", err))
+
+    return subscription
   }
 
-  await createSubscription()
+  subscription = await createSubscription()
 
   initialized = true
   return {
