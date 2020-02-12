@@ -26,8 +26,9 @@ exports.build = async function() {
   process.env.ENABLE_GATSBY_EXTERNAL_JOBS = true
 
   const queue = await processorQueue.initialize()
-  const gatsbyProcess = cp.fork(`${process.cwd()}/node_modules/.bin/gatsby`, ['build'], {silent: true});
+  const gatsbyProcess = cp.fork(`${process.cwd()}/node_modules/.bin/gatsby`, ['build']);
   gatsbyProcess.on('exit', async (code) => {
+    console.log("Gatsby is done")
     queue.stop()
     process.exit(code)
   });
@@ -43,11 +44,8 @@ exports.build = async function() {
             try {
               await imageProcessor.process(queue, msg.payload)
             } catch (error) {
-              log.error("Processing failed", error)
-              gatsbyProcess.send({
-                type: MESSAGE_TYPES.JOB_FAILED,
-                payload: {id: msg.id, error}
-              })
+              log.error("Processing failed", msg.payload.id, error)
+              gatsbyProcess.send({type: 'JOB_FAILED', payload: {id: msg.payload.id, error: error.toString()} })
             }
             return
           default:

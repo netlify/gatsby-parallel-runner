@@ -60,7 +60,7 @@ function finalizeJobHandler(storageClient, id, resolve, reject) {
 function timeoutHandler(id, callback) {
   return function() {
     log.trace("Checking timeout for", id)
-    if (jobsInProcess.has(msgId)) {
+    if (jobsInProcess.has(id)) {
       log.error("Timing out job for file", id)
       callback(`Timeout for job with id: ${id}`)
     }
@@ -95,7 +95,7 @@ exports.initialize = async function() {
   const pubSubClient = new PubSub({projectId: config.project_id})
   const storageClient = new Storage({projectId: config.project_id})
 
-  const subName = `nf-sub-${new Date().getTime()}`
+  const subName = `nf-sub-${process.env.TOPIC}-${new Date().getTime()}`
 
   async function createSubscription() {
     // Creates a new subscription
