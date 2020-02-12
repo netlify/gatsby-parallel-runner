@@ -16,7 +16,7 @@ if (!process.env.GOOGLE_APPLICATION_CREDENTIALS.match(/\.json$/)) {
   const credentialsFile = '/tmp/credentials.json'
   let credentials = null
   try {
-    let buff = new Buffer(process.env.GOOGLE_APPLICATION_CREDENTIALS, 'base64')
+    let buff = Buffer.from(process.env.GOOGLE_APPLICATION_CREDENTIALS, 'base64')
     credentials = buff.toString('ascii')
   } catch(err) {
     console.error("GOOGLE_APPLICATION_CREDENTIALS must either be a path to a .json file or base 64 encoded json credentials", err)
