@@ -18,6 +18,7 @@ let initialized = false
 const jobsInProcess = new Map()
 
 function hasFreeMessageMem() {
+  console.log("Checking free mem", messageMemUsage)
   return messageMemUsage < MAX_MEM_MESSAGE_MEM
 }
 
@@ -134,11 +135,11 @@ async function runTask(pubSubClient, storageClient, payload) {
   return new Promise(async (resolve, reject) => {
     log.debug("Waiting for free memory")
     await waitForFreeMessageMem()
+    let size = 0
     try {
       const {id, args, file} = payload
       log.debug("Setting up job", id)
       jobsInProcess.set(id, {resolve: finalizeJobHandler(storageClient, id, resolve, reject), reject})
-      let size = 0
       let data = null
       if (file instanceof Buffer) {
         size = file.byteLength
@@ -164,10 +165,15 @@ async function runTask(pubSubClient, storageClient, payload) {
         const bucketName = `event-processing-${process.env.WORKER_TOPIC}`
         await storageClient.bucket(bucketName).file(`event-${id}`).save(pubsubMsg.toString('base64'));
       }
+
+      delete data
+      delete pubSubMsg
+
       messageMemUsage -= size
       log.debug("Message sent")
       setTimeout(timeoutHandler(id, reject), MAX_JOB_TIME)
     } catch(error) {
+      messageMemUsage -= size
       log.error("Error publishing to queue", error)
       reject(error)
     }
