@@ -139,7 +139,7 @@ async function runTask(pubSubClient, storageClient, payload) {
     try {
       const {id, args, file} = payload
       log.debug("Setting up job", id)
-      jobsInProcess.set(id, {resolve: finalizeJobHandler(id, {resolve, reject}), reject})
+      jobsInProcess.set(id, {resolve: finalizeJobHandler(id, resolve, reject), reject})
       let size = 0
       let data = null
       if (file instanceof Buffer) {
