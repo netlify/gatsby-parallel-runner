@@ -177,7 +177,6 @@ async function runTask(pubSubClient, storageClient, payload) {
       delete data
       delete pubSubMsg
 
-      messageMemUsage -= size
       log.debug("Message sent")
       setTimeout(timeoutHandler(id, reject), MAX_JOB_TIME)
     } catch(error) {
