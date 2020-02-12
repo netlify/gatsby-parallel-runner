@@ -32,31 +32,26 @@ async function waitForFreeMessageMem() {
   })
 }
 
-function finalizeJobHandler(storageClient, id, resolve, reject) {
-  return async (result) => {
-    log.trace("Finalizing for", id)
-    jobsInProcess.delete(id)
-    try {
-      let output = null
-      if (result.storedResult) {
-        const resultBucketName = `event-results-${process.env.TOPIC}`
-        const bucket = storageClient.bucket(resultBucketName)
-        const file = bucket.file(result.storedResult)
-        await file.download({destination: `/tmp/result-${id}`})
-        const data = (await fs.readFile(`/tmp/result-${id}`)).toString()
-        output = JSON.parse(data).output
-        await fs.remove(`/tmp/result-${id}`)
-      } else {
-        output = result.output
-      }
-
-      resolve(output)
-    } catch (err) {
-      log.error("Failed to execute callback", err)
-      reject(`Failed to process result from job ${id}: ${err}`)
+async function finalizeJob(storageClient, result) {
+  try {
+    let output = null
+    if (result.storedResult) {
+      const resultBucketName = `event-results-${process.env.TOPIC}`
+      const bucket = storageClient.bucket(resultBucketName)
+      const file = bucket.file(result.storedResult)
+      await file.download({destination: `/tmp/result-${id}`})
+      const data = (await fs.readFile(`/tmp/result-${id}`)).toString()
+      output = JSON.parse(data).output
+      await fs.remove(`/tmp/result-${id}`)
+    } else {
+      output = result.output
     }
+  } catch (err) {
+    log.error("Failed to execute callback", err)
+    return Promise.reject(`Failed to process result from job ${id}: ${err}`)
   }
 }
+
 
 function timeoutHandler(id, callback) {
   return function() {
@@ -131,14 +126,28 @@ async function runTask(pubSubClient, storageClient, payload) {
     throw("Queue has not been initialized")
   }
 
+  log.debug("Waiting for free memory")
+  await waitForFreeMessageMem()
+  let size = 0
   return new Promise(async (resolve, reject) => {
-    log.debug("Waiting for free memory")
-    await waitForFreeMessageMem()
-    let size = 0
+    const {id, args, file} = payload
+    log.debug("Setting up job", id)
+    const job = {
+      resolve: async (result) => {
+        await finalizeJob(result)
+        jobsInProcess.delete(id)
+        messageMemUsage -= size
+        resolve(result)
+      },
+      reject: (err) => {
+        jobsInProcess.delete(id)
+        messageMemUsage -= size
+        reject(err)
+      }
+    }
+
     try {
-      const {id, args, file} = payload
-      log.debug("Setting up job", id)
-      jobsInProcess.set(id, {resolve: finalizeJobHandler(storageClient, id, resolve, reject), reject})
+      jobsInProcess.set(id, job)
       let data = null
       if (file instanceof Buffer) {
         size = file.byteLength
