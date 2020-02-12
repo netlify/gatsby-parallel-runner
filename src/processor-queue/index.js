@@ -31,7 +31,7 @@ async function waitForFreeMessageMem() {
   })
 }
 
-function finalizeJobHandler(id, resolve, reject) {
+function finalizeJobHandler(storageClient, id, resolve, reject) {
   return async (result) => {
     log.trace("Finalizing for", id)
     jobsInProcess.delete(id)
@@ -39,12 +39,12 @@ function finalizeJobHandler(id, resolve, reject) {
       let output = null
       if (result.storedResult) {
         const resultBucketName = `event-results-${process.env.TOPIC}`
-        const bucket = storage.bucket(resultBucketName)
+        const bucket = storageClient.bucket(resultBucketName)
         const file = bucket.file(result.storedResult)
-        await file.download({destination: `/tmp/result-${msgId}`})
-        const data = (await fs.readFile(`/tmp/result-${msgId}`)).toString()
+        await file.download({destination: `/tmp/result-${id}`})
+        const data = (await fs.readFile(`/tmp/result-${id}`)).toString()
         output = JSON.parse(data).output
-        await fs.remove(`/tmp/result-${msgId}`)
+        await fs.remove(`/tmp/result-${id}`)
       } else {
         output = result.output
       }
@@ -59,9 +59,9 @@ function finalizeJobHandler(id, resolve, reject) {
 
 function timeoutHandler(id, callback) {
   return function() {
-    log.trace("Checking timeout for", file, msgId)
+    log.trace("Checking timeout for", id)
     if (jobsInProcess.has(msgId)) {
-      log.error("Timing out job for file", file, msgId)
+      log.error("Timing out job for file", id)
       callback(`Timeout for job with id: ${id}`)
     }
   }
@@ -120,9 +120,7 @@ exports.initialize = async function() {
   initialized = true
   return {
     process: (payload) => runTask(pubSubClient, storageClient, payload),
-    stop: () => {
-      subscription.removeListener('message', pubsubMessageHandler)
-    }
+    stop: () => subscription.removeListener('message', pubsubMessageHandler)
   }
 }
 
@@ -139,7 +137,7 @@ async function runTask(pubSubClient, storageClient, payload) {
     try {
       const {id, args, file} = payload
       log.debug("Setting up job", id)
-      jobsInProcess.set(id, {resolve: finalizeJobHandler(id, resolve, reject), reject})
+      jobsInProcess.set(id, {resolve: finalizeJobHandler(storageClient, id, resolve, reject), reject})
       let size = 0
       let data = null
       if (file instanceof Buffer) {
@@ -166,7 +164,7 @@ async function runTask(pubSubClient, storageClient, payload) {
         const bucketName = `event-processing-${process.env.WORKER_TOPIC}`
         await storageClient.bucket(bucketName).file(`event-${id}`).save(pubsubMsg.toString('base64'));
       }
-      messageMemUsage -= stat.size
+      messageMemUsage -= size
       log.debug("Message sent")
       setTimeout(timeoutHandler(id, reject), MAX_JOB_TIME)
     } catch(error) {
