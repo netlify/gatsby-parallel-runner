@@ -5,6 +5,7 @@ const {PubSub} = require('@google-cloud/pubsub');
 const {Storage} = require('@google-cloud/storage');
 
 const MAX_PUBSUB_RESPONSE_SIZE = 1024 * 1024 // 1mb
+const MAX_NON_RESUMABLE_SIZE = 1024 * 1024 * 9 // 9mb
 
 const pubSubClient = new PubSub();
 const storageClient = new Storage();
@@ -13,8 +14,6 @@ process.chdir('/tmp')
 
 async function processPubSubMessageOrStorageObject(msg) {
   let data = null
-
-  console.log(`Got msg: ${JSON.stringify(msg)}`)
 
   if (msg.bucket && msg.name) {
     const bucket = storageClient.bucket(msg.bucket)
@@ -31,16 +30,11 @@ async function processPubSubMessageOrStorageObject(msg) {
 exports.gatsbySharpProcessor = async (msg, context) => {
   const event = await processPubSubMessageOrStorageObject(msg)
   try {
-    const file = Buffer.from(event.file)
+    const file = Buffer.from(event.file, 'base64')
     const results = processFile(file, event.action.operations, event.action.pluginOptions)
     const tranforms = await Promise.all(results)
 
-    const result = {
-      type: 'JOB_COMPLETED',
-      payload: {
-        id: event.id,
-      }
-    }
+    const result = { type: 'JOB_COMPLETED', payload: { id: event.id, } }
 
     let size = 0
     const output = []
@@ -51,11 +45,10 @@ exports.gatsbySharpProcessor = async (msg, context) => {
     }))
 
     if (size > MAX_PUBSUB_RESPONSE_SIZE) {
-      const storageResult = {
-        id: event.id,
-        output
-      }
-      await storageClient.bucket(`event-results-${event.topic}`).file(`result-${event.id}`).save(Buffer.from(JSON.stringify(storageResult)))
+      const storageResult = {id: event.id, output }
+      await storageClient.bucket(`event-results-${event.topic}`).file(`result-${event.id}`).save(Buffer.from(JSON.stringify(storageResult)), {
+        resumable: size > MAX_NON_RESUMABLE_SIZE
+      })
       result.payload.storedResult = `result-${event.id}`
     } else {
       result.payload.output = output
@@ -63,17 +56,17 @@ exports.gatsbySharpProcessor = async (msg, context) => {
 
     const resultMsg = Buffer.from(JSON.stringify(result))
     const messageId = await pubSubClient.topic(event.topic).publish(resultMsg)
-    console.log("Published message ", messageId, resultMsg.length, result.payload.storedResult)
+    console.log("Published message ", event.id, messageId, resultMsg.length, result.payload.storedResult)
     await fs.emptyDir('/tmp')
   } catch (err) {
-    const messageId = await pubSubClient.topic(event.topic).publish(Buffer.from(JSON.stringify({
+    console.error("Failed to process message:", event.id, err)
+    await pubSubClient.topic(event.topic).publish(Buffer.from(JSON.stringify({
       type: 'JOB_FAILED',
       payload: {
         id: event.id,
         error: err.toString()
       }
     })))
-    console.error("Failed to process message:", messageId, err)
     await fs.emptyDir('/tmp')
   }
 };
