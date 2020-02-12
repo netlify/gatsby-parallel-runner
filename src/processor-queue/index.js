@@ -94,8 +94,7 @@ function pubsubMessageHandler(msg) {
 exports.initialize = async function() {
   const config = JSON.parse(fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS))
   const pubSubClient = new PubSub({projectId: config.project_id})
-  const storageClient = new Storage({projectId: config.project_id})
-
+  const storageClient = new Storage({projectId: config.project_id, autoRetry: true})
   const subName = `nf-sub-${process.env.TOPIC}-${new Date().getTime()}`
 
   async function createSubscription() {
