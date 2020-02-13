@@ -34,18 +34,16 @@ async function waitForFreeMessageMem() {
 
 async function finalizeJob(storageClient, result) {
   try {
-    let output = null
     if (result.storedResult) {
       const resultBucketName = `event-results-${process.env.TOPIC}`
       const bucket = storageClient.bucket(resultBucketName)
       const file = bucket.file(result.storedResult)
       await file.download({destination: `/tmp/result-${id}`})
       const data = (await fs.readFile(`/tmp/result-${id}`)).toString()
-      output = JSON.parse(data).output
       await fs.remove(`/tmp/result-${id}`)
-    } else {
-      output = result.output
+      return JSON.parse(data).output
     }
+    return result.output
   } catch (err) {
     log.error("Failed to execute callback", err)
     return Promise.reject(`Failed to process result from job ${id}: ${err}`)
@@ -89,7 +87,7 @@ function pubsubMessageHandler(msg) {
 exports.initialize = async function() {
   const config = JSON.parse(fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS))
   const pubSubClient = new PubSub({projectId: config.project_id})
-  const storageClient = new Storage({projectId: config.project_id, autoRetry: true})
+  const storageClient = new Storage({projectId: config.project_id, autoRetry: true, maxRetries: 10})
   const subName = `nf-sub-${process.env.TOPIC}-${new Date().getTime()}`
 
   async function createSubscription() {
@@ -134,10 +132,10 @@ async function runTask(pubSubClient, storageClient, payload) {
     log.debug("Setting up job", id)
     const job = {
       resolve: async (result) => {
-        await finalizeJob(result)
+        const output = await finalizeJob(storageClient, result)
         jobsInProcess.delete(id)
         messageMemUsage -= size
-        resolve(result)
+        resolve(output)
       },
       reject: (err) => {
         jobsInProcess.delete(id)
