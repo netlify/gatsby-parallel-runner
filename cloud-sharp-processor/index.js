@@ -63,7 +63,7 @@ exports.gatsbySharpProcessor = async (msg, context) => {
 
     const resultMsg = Buffer.from(JSON.stringify(result))
     const messageId = await pubSubClient.topic(event.topic).publish(resultMsg)
-    console.log("Published message ", messageId, resultMsg.length, result.payload.storedResult)
+    console.log("Published message ", event.id, messageId, resultMsg.length, result.payload.storedResult)
     await fs.emptyDir('/tmp')
   } catch (err) {
     const messageId = await pubSubClient.topic(event.topic).publish(Buffer.from(JSON.stringify({
@@ -73,7 +73,7 @@ exports.gatsbySharpProcessor = async (msg, context) => {
         error: err.toString()
       }
     })))
-    console.error("Failed to process message:", messageId, err)
+    console.error("Failed to process message:", event.id, messageId, err)
     await fs.emptyDir('/tmp')
   }
 };

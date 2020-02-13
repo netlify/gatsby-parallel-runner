@@ -32,7 +32,7 @@ async function waitForFreeMessageMem() {
   })
 }
 
-async function finalizeJob(storageClient, result) {
+async function finalizeJob(storageClient, id, result) {
   try {
     if (result.storedResult) {
       const resultBucketName = `event-results-${process.env.TOPIC}`
@@ -132,7 +132,7 @@ async function runTask(pubSubClient, storageClient, payload) {
     log.debug("Setting up job", id)
     const job = {
       resolve: async (result) => {
-        const output = await finalizeJob(storageClient, result)
+        const output = await finalizeJob(storageClient, id, result)
         jobsInProcess.delete(id)
         messageMemUsage -= size
         resolve(output)
