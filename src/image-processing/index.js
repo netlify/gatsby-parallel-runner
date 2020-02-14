@@ -12,9 +12,9 @@ exports.process = async function(processor, msg) {
 
   try {
     console.debug("Processing image", file)
-    const output = await processor.process({id: msg.id, args: msg.args, file})
-    console.debug("Got output from queue")
-    await Promise.all(output.map(async (transform) => {
+    const result = await processor.process({id: msg.id, args: msg.args, file})
+    console.debug("Got output from processing")
+    await Promise.all(result.output.map(async (transform) => {
       const filePath = path.join(msg.outputDir, transform.outputPath)
       try {
         await fs.mkdirp(path.dirname(filePath))
