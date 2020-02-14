@@ -41,11 +41,13 @@ class GooglePubSub {
     this.subscribers.push(handler)
   }
 
-  async publish(msg) {
+  async publish(id, msg) {
     if (msg < this.maxPubSubSize) {
+      log.debug(`Publishing ${id} to pubsub`)
       await this.pubSubClient.topic(process.env.WORKER_TOPIC).publish(msg);
     } else {
-      await this.storageClient.bucket(this.bucketName).file(`event-${msg.id}`).save(msg, {resumable: false});
+      log.debug(`Publishing ${id} to storage`)
+      await this.storageClient.bucket(this.bucketName).file(`event-${id}`).save(msg, {resumable: false});
     }
   }
 
@@ -143,7 +145,7 @@ class Queue {
         }
       }, this.maxJobTime)
       try {
-        await this.pubSubImplementation.publish(msg)
+        await this.pubSubImplementation.publish(id, msg)
       } catch(err) {
         reject(err)
       }
