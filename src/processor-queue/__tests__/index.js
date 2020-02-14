@@ -1,7 +1,9 @@
 'use strict';
 
 const path = require('path')
-const { Processor, Job, GooglePubSub } = require('../index');
+const { Processor } = require('../index');
+const { Job } = require('../queue')
+const { GooglePubSub } = require('../google-pub-sub')
 
 process.env.TOPIC = 'test'
 

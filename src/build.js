@@ -2,7 +2,8 @@
 
 const cp = require('child_process')
 const log = require('loglevel')
-const { Processor, GooglePubSub } = require('./processor-queue')
+const { Processor } = require('./processor-queue')
+const { GooglePubSub } = require('./processor-queue/google-pub-sub')
 const imageProcessor = require('./image-processing')
 
 exports.build = async function() {
@@ -30,7 +31,7 @@ exports.build = async function() {
 
   const gatsbyProcess = cp.fork(`${process.cwd()}/node_modules/.bin/gatsby`, ['build']);
   gatsbyProcess.on('exit', async (code) => {
-    console.log("Gatsby is done")
+    log.debug("Gatsby existed with", code)
     process.exit(code)
   });
 
