@@ -46,7 +46,7 @@ exports.build = async function() {
               const result = await imageProcessor.process(processor, msg.payload)
               gatsbyProcess.send({type: 'JOB_COMPLETED', payload: {
                 id: msg.payload.id,
-                result: result
+                result
               }})
             } catch (error) {
               log.error("Processing failed", msg.payload.id, " error:", error)
