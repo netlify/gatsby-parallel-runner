@@ -78,12 +78,12 @@ class GooglePubSub {
     subscription.on('close', (err) => log.error("Subscription closed unexpectedly", err))
   }
 
-  async _downloadromStorage(id, storedResult) {
+  async _downloadFromStorage(id, storedResult) {
     const file = this.storageClient.bucket(this.resultBucketName).file(storedResult)
-    await file.download({destination: `/tmp/result-${msg.id}`})
-    const data = (await fs.readFile(`/tmp/result-${msg.id}`)).toString()
+    await file.download({destination: `/tmp/result-${id}`})
+    const data = (await fs.readFile(`/tmp/result-${id}`)).toString()
     const output = JSON.parse(data).output
-    await fs.remove(`/tmp/result-${msgId}`)
+    await fs.remove(`/tmp/result-${id}`)
     return output
   }
 }
