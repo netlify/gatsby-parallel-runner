@@ -1,19 +1,21 @@
-const { PubSub } = require('@google-cloud/pubsub')
-const { Storage } = require('@google-cloud/storage')
-const fs = require('fs-extra')
-const log = require('loglevel')
+const { PubSub } = require("@google-cloud/pubsub")
+const { Storage } = require("@google-cloud/storage")
+const fs = require("fs-extra")
+const log = require("loglevel")
 
 const DEFAULT_MAX_PUB_SUB_SIZE = 1024 * 1024 * 5 // 5 Megabyte
 
 class GooglePubSub {
-  constructor({maxPubSubSize, noSubscription}) {
+  constructor({ maxPubSubSize, noSubscription }) {
     this.maxPubSubSize = maxPubSubSize || DEFAULT_MAX_PUB_SUB_SIZE
-    const config = JSON.parse(fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS))
+    const config = JSON.parse(
+      fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)
+    )
     this.subName = `nf-sub-${new Date().getTime()}`
     this.bucketName = `event-processing-${process.env.WORKER_TOPIC}`
     this.resultBucketName = `event-results-${process.env.TOPIC}`
-    this.pubSubClient = new PubSub({projectId: config.project_id});
-    this.storageClient = new Storage({projectId: config.project_id});
+    this.pubSubClient = new PubSub({ projectId: config.project_id })
+    this.storageClient = new Storage({ projectId: config.project_id })
     this.subscribers = []
 
     return (async () => {
@@ -22,11 +24,13 @@ class GooglePubSub {
           await this._createSubscription()
         }
       } catch (err) {
-        return Promise.reject(`Failed to start Google PubSub subscriptionn: ${err}`)
+        return Promise.reject(
+          `Failed to start Google PubSub subscriptionn: ${err}`
+        )
       }
 
-      return this;
-    })();
+      return this
+    })()
   }
 
   subscribe(handler) {
@@ -36,19 +40,25 @@ class GooglePubSub {
   async publish(id, msg) {
     if (msg.byteLength < this.maxPubSubSize) {
       log.debug(`Publishing ${id} to pubsub`)
-      await this.pubSubClient.topic(process.env.WORKER_TOPIC).publish(msg);
+      await this.pubSubClient.topic(process.env.WORKER_TOPIC).publish(msg)
     } else {
       log.debug(`Publishing ${id} to storage`)
-      await this.storageClient.bucket(this.bucketName).file(`event-${id}`).save(msg.toString('base64'), {resumable: false});
+      await this.storageClient
+        .bucket(this.bucketName)
+        .file(`event-${id}`)
+        .save(msg.toString("base64"), { resumable: false })
     }
   }
 
   async _messageHandler(msg) {
     msg.ack()
-    const pubSubMessage = JSON.parse(Buffer.from(msg.data, 'base64').toString());
-    const {payload} = pubSubMessage
+    const pubSubMessage = JSON.parse(Buffer.from(msg.data, "base64").toString())
+    const { payload } = pubSubMessage
     if (payload && payload.storedResult) {
-      payload.output = await this._downloadFromStorage(msg.id, payload.storedResult)
+      payload.output = await this._downloadFromStorage(
+        msg.id,
+        payload.storedResult
+      )
     }
 
     this.subscribers.forEach(handler => handler(pubSubMessage))
@@ -58,20 +68,26 @@ class GooglePubSub {
     // Creates a new subscription
     try {
       await this.pubSubClient.createTopic(process.env.TOPIC)
-    } catch(err) {
+    } catch (err) {
       log.trace("Create topic failed", err)
     }
 
-    const [subscription] = await this.pubSubClient.topic(process.env.TOPIC).createSubscription(this.subName)
+    const [subscription] = await this.pubSubClient
+      .topic(process.env.TOPIC)
+      .createSubscription(this.subName)
 
-    subscription.on('message', this._messageHandler.bind(this))
-    subscription.on('error', (err) => log.error("Error from subscription: ", err))
-    subscription.on('close', (err) => log.error("Subscription closed unexpectedly", err))
+    subscription.on("message", this._messageHandler.bind(this))
+    subscription.on("error", err => log.error("Error from subscription: ", err))
+    subscription.on("close", err =>
+      log.error("Subscription closed unexpectedly", err)
+    )
   }
 
   async _downloadFromStorage(id, storedResult) {
-    const file = this.storageClient.bucket(this.resultBucketName).file(storedResult)
-    await file.download({destination: `/tmp/result-${id}`})
+    const file = this.storageClient
+      .bucket(this.resultBucketName)
+      .file(storedResult)
+    await file.download({ destination: `/tmp/result-${id}` })
     const data = (await fs.readFile(`/tmp/result-${id}`)).toString()
     const output = JSON.parse(data).output
     await fs.remove(`/tmp/result-${id}`)
