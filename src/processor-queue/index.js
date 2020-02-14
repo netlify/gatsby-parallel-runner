@@ -47,7 +47,7 @@ class GooglePubSub {
       await this.pubSubClient.topic(process.env.WORKER_TOPIC).publish(msg);
     } else {
       log.debug(`Publishing ${id} to storage`)
-      await this.storageClient.bucket(this.bucketName).file(`event-${id}`).save(msg, {resumable: false});
+      await this.storageClient.bucket(this.bucketName).file(`event-${id}`).save(msg.toString('base64'), {resumable: false});
     }
   }
 
