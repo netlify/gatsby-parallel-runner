@@ -2,7 +2,7 @@
 
 const cp = require('child_process')
 const log = require('loglevel')
-const processorQueue = require('./processor-queue')
+const { Processor, GooglePubSub } = require('./processor-queue')
 const imageProcessor = require('./image-processing')
 
 exports.build = async function() {
@@ -25,11 +25,12 @@ exports.build = async function() {
 
   process.env.ENABLE_GATSBY_EXTERNAL_JOBS = true
 
-  const queue = await processorQueue.initialize()
+  const googlePubSub = await new GooglePubSub({})
+  const processor = new Processor({pubSubImplementation: googlePubSub})
+
   const gatsbyProcess = cp.fork(`${process.cwd()}/node_modules/.bin/gatsby`, ['build']);
   gatsbyProcess.on('exit', async (code) => {
     console.log("Gatsby is done")
-    queue.stop()
     process.exit(code)
   });
 
@@ -42,7 +43,7 @@ exports.build = async function() {
         switch (msg.payload.name) {
           case JOB_TYPES.IMAGE_PROCESSING:
             try {
-              await imageProcessor.process(queue, msg.payload)
+              await imageProcessor.process(processor, msg.payload)
             } catch (error) {
               log.error("Processing failed", msg.payload.id, " error:", error)
               gatsbyProcess.send({type: 'JOB_FAILED', payload: {id: msg.payload.id, error: error.toString()} })

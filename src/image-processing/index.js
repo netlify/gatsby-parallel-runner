@@ -2,7 +2,7 @@ const fs = require('fs-extra')
 const path = require('path')
 const log = require('loglevel')
 
-exports.process = async function(queue, msg) {
+exports.process = async function(processor, msg) {
   if (!msg.inputPaths || msg.inputPaths.length > 1) {
     log.error("Wrong number of input paths in msg: ", msg)
     return Promise.reject('Wrong number of input paths')
@@ -12,7 +12,7 @@ exports.process = async function(queue, msg) {
 
   try {
     console.debug("Processing image", file)
-    const output = await queue.process({id: msg.id, args: msg.args, file})
+    const output = await processor.process({id: msg.id, args: msg.args, file})
     console.debug("Got output from queue")
     await Promise.all(output.map(async (transform) => {
       const filePath = path.join(msg.outputDir, transform.outputPath)
