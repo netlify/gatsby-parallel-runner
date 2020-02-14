@@ -42,7 +42,7 @@ class GooglePubSub {
   }
 
   async publish(id, msg) {
-    if (msg < this.maxPubSubSize) {
+    if (msg.byteLength < this.maxPubSubSize) {
       log.debug(`Publishing ${id} to pubsub`)
       await this.pubSubClient.topic(process.env.WORKER_TOPIC).publish(msg);
     } else {
