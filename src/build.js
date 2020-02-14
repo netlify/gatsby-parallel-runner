@@ -43,10 +43,10 @@ exports.build = async function() {
         switch (msg.payload.name) {
           case JOB_TYPES.IMAGE_PROCESSING:
             try {
-              await imageProcessor.process(processor, msg.payload)
+              const result = await imageProcessor.process(processor, msg.payload)
               gatsbyProcess.send({type: 'JOB_COMPLETED', payload: {
                 id: msg.payload.id,
-                result: {output: output.map(t => ({outputPath: t.outputPath, args: t.args}))}
+                result: result
               }})
             } catch (error) {
               log.error("Processing failed", msg.payload.id, " error:", error)
