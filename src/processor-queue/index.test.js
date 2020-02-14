@@ -1,3 +1,5 @@
+'use strict';
+
 const path = require('path')
 const { Processor, Job, GooglePubSub } = require('./index');
 
@@ -44,17 +46,36 @@ test('job message for file', async () => {
   })
 })
 
-test('process should push a job unto the queue', async () => {
+// test('process should push a job unto the queue', async () => {
+//   expect.assertions(2)
+//   const pubSubImplementation = {
+//     publish: (msg) => { expect(msg).toBeDefined()},
+//     subscribe: (handler) => { setTimeout(() => handler({
+//       id: "2345", type: "JOB_COMPLETED", payload: {id: "1234", output: "done"}
+//     }))}
+//   }
+//   console.log("Instantiating processor for success test")
+//   const processor = new Processor({pubSubImplementation})
+//   console.log("Processing for success test")
+//   const result = await processor.process({id: "1234", args: [], file: Buffer.from("Hello")})
+//   expect(result).toEqual({id: "1234", output: "done"})
+// })
+
+
+test('failure message should cancel processing', async () => {
   expect.assertions(2)
   const pubSubImplementation = {
     publish: (msg) => { expect(msg).toBeDefined()},
     subscribe: (handler) => { setTimeout(() => handler({
-      id: "2345", type: "JOB_COMPLETED", payload: {id: "1234", output: "done"}
+      id: "2345", type: "JOB_FAILED", payload: {id: "1234", error: "Error"}
     }))}
   }
-  const processor = await new Processor({pubSubImplementation})
-  const result = await processor.process({id: "1234", args: [], file: Buffer.from("Hello")})
-  expect(result).toEqual({id: "1234", output: "done"})
+  const processor = new Processor({pubSubImplementation})
+  try {
+    await processor.process({id: "1234", args: [], file: Buffer.from("Hello")})
+  } catch(err) {
+    expect(err).toBeDefined()
+  }
 })
 
 test('instantiate google pubsub', async () => {

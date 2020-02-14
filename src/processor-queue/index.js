@@ -1,3 +1,4 @@
+'use strict';
 
 const fs = require('fs-extra')
 const log = require('loglevel')
@@ -138,7 +139,7 @@ class Queue {
 
   async push(id, msg) {
     return new Promise(async (resolve, reject) => {
-      this._jobs.set(id, resolve)
+      this._jobs.set(id, {resolve, reject})
       setTimeout(() => {
         if (this._jobs.has(id)) {
           reject(`Job timed out ${id}`)
@@ -159,13 +160,13 @@ class Queue {
     switch (type) {
       case MESSAGE_TYPES.JOB_COMPLETED:
         if (this._jobs.has(payload.id)) {
-          this._jobs.get(payload.id)(payload)
+          this._jobs.get(payload.id).resolve(payload)
           this._jobs.delete(payload.id)
         }
         return
       case MESSAGE_TYPES.JOB_FAILED:
-        if (jobsInProcess.has(payload.id)) {
-          this._jobs.get(payload.id)(Promise.reject(payload.error))
+        if (this._jobs.has(payload.id)) {
+          this._jobs.get(payload.id).reject(payload.error)
           this._jobs.delete(payload.id)
         }
         return
