@@ -30,7 +30,7 @@ exports.build = async function() {
 
   const gatsbyProcess = cp.fork(`${process.cwd()}/node_modules/.bin/gatsby`, ['build']);
   gatsbyProcess.on('exit', async (code) => {
-    console.log("Gatsby is done")
+    log.debug("Gatsby existed with", code)
     process.exit(code)
   });
 
