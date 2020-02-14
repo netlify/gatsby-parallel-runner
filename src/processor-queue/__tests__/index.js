@@ -1,7 +1,7 @@
 'use strict';
 
 const path = require('path')
-const { Processor, Job, GooglePubSub } = require('./index');
+const { Processor, Job, GooglePubSub } = require('../index');
 
 process.env.TOPIC = 'test'
 
@@ -11,12 +11,12 @@ test('Job size calculation for string', async () => {
 })
 
 test('Job size calculation for file', async () => {
-  const job = await new Job({id: "1234", args: [], file: path.join(__dirname, 'test', 'hello.txt')})
+  const job = await new Job({id: "1234", args: [], file: path.join(__dirname, 'hello.txt')})
   expect(job.fileSize).toBe(14)
 })
 
 test('Job size calculation for missing file', async () => {
-  const file = path.join(__dirname, 'test', 'nopes.txt')
+  const file = path.join(__dirname, 'nopes.txt')
   expect.assertions(1)
   await expect(new Job({id: "1234", args: [], file})).rejects.toThrow()
 })
@@ -34,7 +34,7 @@ test('job message for string', async () => {
 })
 
 test('job message for file', async () => {
-  const file = path.join(__dirname, 'test', 'hello.txt')
+  const file = path.join(__dirname, 'hello.txt')
   const job = await new Job({id: "1234", args: [], file})
   const msg = await job.msg()
   expect(msg).toBeInstanceOf(Buffer)
@@ -46,20 +46,18 @@ test('job message for file', async () => {
   })
 })
 
-// test('process should push a job unto the queue', async () => {
-//   expect.assertions(2)
-//   const pubSubImplementation = {
-//     publish: (msg) => { expect(msg).toBeDefined()},
-//     subscribe: (handler) => { setTimeout(() => handler({
-//       id: "2345", type: "JOB_COMPLETED", payload: {id: "1234", output: "done"}
-//     }))}
-//   }
-//   console.log("Instantiating processor for success test")
-//   const processor = new Processor({pubSubImplementation})
-//   console.log("Processing for success test")
-//   const result = await processor.process({id: "1234", args: [], file: Buffer.from("Hello")})
-//   expect(result).toEqual({id: "1234", output: "done"})
-// })
+test('process should push a job unto the queue', async () => {
+  expect.assertions(2)
+  const pubSubImplementation = {
+    publish: (msg) => { expect(msg).toBeDefined()},
+    subscribe: (handler) => { setTimeout(() => handler({
+      id: "2345", type: "JOB_COMPLETED", payload: {id: "1234", output: "done"}
+    }))}
+  }
+  const processor = new Processor({pubSubImplementation})
+  const result = await processor.process({id: "1234", args: [], file: Buffer.from("Hello")})
+  expect(result).toEqual({id: "1234", output: "done"})
+})
 
 
 test('failure message should cancel processing', async () => {
