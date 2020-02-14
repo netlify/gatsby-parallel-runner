@@ -1,14 +1,14 @@
-'use strict';
-const { Queue, Job } = require('./queue')
+"use strict"
+const { Queue, Job } = require("./queue")
 
 const DEFAULT_MAX_MESSAGE_MEM = 1024 * 1024 * 5 * 10 // 500 megabytes
 
 class Processor {
-  constructor({maxJobTime, maxMessageMem, pubSubImplementation}) {
+  constructor({ maxJobTime, maxMessageMem, pubSubImplementation }) {
     this._mem = 0
     this.maxMessageMem = maxMessageMem || DEFAULT_MAX_MESSAGE_MEM
 
-    this.queue = new Queue({maxJobTime, maxMessageMem, pubSubImplementation})
+    this.queue = new Queue({ maxJobTime, maxMessageMem, pubSubImplementation })
   }
 
   async process(payload) {
@@ -31,7 +31,9 @@ class Processor {
   async _waitForFreeMessageMem() {
     return new Promise((resolve, reject) => {
       const check = () => {
-        if (this._mem <= this.maxMessageMem) { return resolve() }
+        if (this._mem <= this.maxMessageMem) {
+          return resolve()
+        }
         setTimeout(check, 100)
       }
       check()
