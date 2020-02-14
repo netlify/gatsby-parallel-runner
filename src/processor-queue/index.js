@@ -57,7 +57,7 @@ class GooglePubSub {
     const pubSubMessage = JSON.parse(Buffer.from(msg.data, 'base64').toString());
     const {payload} = pubSubMessage
     if (payload && payload.storedResult) {
-      payload.output = await this.downloadFromStorage(msg.id, payload.storedResult)
+      payload.output = await this._downloadFromStorage(msg.id, payload.storedResult)
     }
 
     this.subscribers.forEach(handler => handler(pubSubMessage))

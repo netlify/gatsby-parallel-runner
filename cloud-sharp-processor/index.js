@@ -30,16 +30,11 @@ async function processPubSubMessageOrStorageObject(msg) {
 exports.gatsbySharpProcessor = async (msg, context) => {
   const event = await processPubSubMessageOrStorageObject(msg)
   try {
-    const file = Buffer.from(event.file)
+    const file = Buffer.from(event.file, 'base64')
     const results = processFile(file, event.action.operations, event.action.pluginOptions)
     const tranforms = await Promise.all(results)
 
-    const result = {
-      type: 'JOB_COMPLETED',
-      payload: {
-        id: event.id,
-      }
-    }
+    const result = { type: 'JOB_COMPLETED', payload: { id: event.id, } }
 
     let size = 0
     const output = []
