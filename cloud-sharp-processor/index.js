@@ -55,7 +55,9 @@ exports.gatsbySharpProcessor = async (msg, context) => {
         id: event.id,
         output
       }
-      await storageClient.bucket(`event-results-${event.topic}`).file(`result-${event.id}`).save(Buffer.from(JSON.stringify(storageResult)))
+      await storageClient.bucket(`event-results-${event.topic}`).file(`result-${event.id}`).save(Buffer.from(JSON.stringify(storageResult)), {
+        resumable: false
+      })
       result.payload.storedResult = `result-${event.id}`
     } else {
       result.payload.output = output

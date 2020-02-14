@@ -18,7 +18,6 @@ let initialized = false
 const jobsInProcess = new Map()
 
 function hasFreeMessageMem() {
-  console.log("Checking free mem", messageMemUsage)
   return messageMemUsage < MAX_MEM_MESSAGE_MEM
 }
 
@@ -134,11 +133,13 @@ async function runTask(pubSubClient, storageClient, payload) {
       resolve: async (result) => {
         const output = await finalizeJob(storageClient, id, result)
         jobsInProcess.delete(id)
+        log.debug("Finished job", jobsInProcess.keys())
         messageMemUsage -= size
         resolve(output)
       },
       reject: (err) => {
         jobsInProcess.delete(id)
+        log.debug("Failed job", jobsInProcess.keys())
         messageMemUsage -= size
         reject(err)
       }
@@ -146,6 +147,7 @@ async function runTask(pubSubClient, storageClient, payload) {
 
     try {
       jobsInProcess.set(id, job)
+      log.debug("Started job", jobsInProcess.keys())
       let data = null
       if (file instanceof Buffer) {
         size = file.byteLength
@@ -169,7 +171,9 @@ async function runTask(pubSubClient, storageClient, payload) {
       } else {
         log.debug("Publishing to storage queue", id)
         const bucketName = `event-processing-${process.env.WORKER_TOPIC}`
-        await storageClient.bucket(bucketName).file(`event-${id}`).save(pubsubMsg.toString('base64'));
+        await storageClient.bucket(bucketName).file(`event-${id}`).save(pubsubMsg.toString('base64'), {
+          resumable: false
+        });
       }
 
       delete data
