@@ -2,7 +2,8 @@
 
 const cp = require('child_process')
 const log = require('loglevel')
-const { Processor, GooglePubSub } = require('./processor-queue')
+const { Processor } = require('./processor-queue')
+const { GooglePubSub } = require('./processor-queue/google-pub-sub')
 const imageProcessor = require('./image-processing')
 
 exports.build = async function() {
