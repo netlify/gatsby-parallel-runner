@@ -19,6 +19,15 @@ class GooglePubSub {
     this.subscribers = []
 
     return (async () => {
+      const topicCreatedFile = file.path(
+        ".cache",
+        `topic-created-${process.env.TOPIC}`
+      )
+      const exists = await fs.pathExists(topicCreatedFile)
+      if (exists) {
+        return this
+      }
+
       try {
         if (!noSubscription) {
           await this._createSubscription()
@@ -28,6 +37,26 @@ class GooglePubSub {
           `Failed to start Google PubSub subscriptionn: ${err}`
         )
       }
+
+      try {
+        const lifeCycle = `<?xml version="1.0" ?>
+        <LifecycleConfiguration>
+            <Rule>
+                <Action>
+                    <Delete/>
+                </Action>
+                <Condition>
+                    <Age>30</Age>
+                </Condition>
+            </Rule>
+        </LifecycleConfiguration>`
+        const [bucket] = await storage.createBucket(resultBucketName)
+        await bucket.setMetadata({ lifeCycle })
+      } catch (err) {
+        console.log("Create result bucket failed", err)
+      }
+
+      await fs.ensureFile(topicCreatedFile)
 
       return this
     })()

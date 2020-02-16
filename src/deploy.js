@@ -85,24 +85,6 @@ exports.deploy = async function() {
   }
 
   try {
-    const lifeCycle = `<?xml version="1.0" ?>
-    <LifecycleConfiguration>
-        <Rule>
-            <Action>
-                <Delete/>
-            </Action>
-            <Condition>
-                <Age>30</Age>
-            </Condition>
-        </Rule>
-    </LifecycleConfiguration>`
-    const [bucket] = await storage.createBucket(resultBucketName)
-    await bucket.setMetadata({ lifeCycle })
-  } catch (err) {
-    console.log("Create result bucket failed", err)
-  }
-
-  try {
     console.log("Deploying as pubsub handler")
     await deployType("PubSub", cwd, config)
 
