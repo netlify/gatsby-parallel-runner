@@ -51,7 +51,9 @@ class GooglePubSub {
                 </Condition>
             </Rule>
         </LifecycleConfiguration>`
-        const [bucket] = await storage.createBucket(resultBucketName)
+        const [bucket] = await this.storageClient.createBucket(
+          this.resultBucketName
+        )
         await bucket.setMetadata({ lifeCycle })
       } catch (err) {
         console.log("Create result bucket failed", err)
