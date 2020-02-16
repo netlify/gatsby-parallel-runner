@@ -69,10 +69,7 @@ exports.build = async function(cmd = "node_modules/.bin/gatsby build") {
 
   process.env.ENABLE_GATSBY_EXTERNAL_JOBS = true
 
-  if (!pubSubImplementation) {
-    const googlePubSub = await new GooglePubSub({})
-    pubSubImplementation = googlePubSub
-  }
+  const pubSubImplementation = await new GooglePubSub({})
   const processor = new Processor({ pubSubImplementation })
   const processors = {
     IMAGE_PROCESSING: imageProcessor.process.bind(imageProcessor, processor),
