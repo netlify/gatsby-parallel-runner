@@ -76,8 +76,7 @@ exports.build = async function(cmd = "node_modules/.bin/gatsby build") {
   }
 
   const [bin, ...args] = cmd.split(" ")
-  const gatsbyProcess =
-    childProcess || cp.fork(path.join(process.cwd(), bin), args)
+  const gatsbyProcess = cp.fork(path.join(process.cwd(), bin), args)
   gatsbyProcess.on("exit", async code => {
     log.debug("Gatsby existed with", code)
     process.exit(code)
