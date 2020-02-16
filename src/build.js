@@ -18,10 +18,7 @@ const MESSAGE_TYPES = {
   ACTIVITY_ERROR: `ACTIVITY_ERROR`,
 }
 
-exports.messageHandler = function messageHandler(
-  gatsbyProcess,
-  processors = {}
-) {
+function messageHandler(gatsbyProcess, processors = {}) {
   return async function(msg) {
     if (
       log.getLevel() <= log.levels.TRACE &&
@@ -85,3 +82,5 @@ exports.build = async function(cmd = "node_modules/.bin/gatsby build") {
   const handler = messageHandler(gatsbyProcess, processors)
   gatsbyProcess.on("message", handler)
 }
+
+exports.messageHandler = messageHandler
