@@ -1,6 +1,7 @@
 const { PubSub } = require("@google-cloud/pubsub")
 const { Storage } = require("@google-cloud/storage")
 const fs = require("fs-extra")
+const path = require("path")
 const log = require("loglevel")
 
 const DEFAULT_MAX_PUB_SUB_SIZE = 1024 * 1024 * 5 // 5 Megabyte
@@ -19,7 +20,7 @@ class GooglePubSub {
     this.subscribers = []
 
     return (async () => {
-      const topicCreatedFile = file.path(
+      const topicCreatedFile = path.join(
         ".cache",
         `topic-created-${process.env.TOPIC}`
       )
