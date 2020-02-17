@@ -1,16 +1,15 @@
 const fs = require("fs-extra")
-const path = require("path")
+const sizeof = require("object-sizeof")
+const klaw = require("klaw")
 const { processFile } = require("gatsby-plugin-sharp/process-file")
 const { PubSub } = require("@google-cloud/pubsub")
 const { Storage } = require("@google-cloud/storage")
 
-const MAX_PUBSUB_RESPONSE_SIZE = 1024 * 1024 // 1mb
+const MAX_PUBSUB_RESPONSE_SIZE = 1024 * 1024 // 5mb
 const MAX_NON_RESUMABLE_SIZE = 1024 * 1024 * 9 // 9mb
 
 const pubSubClient = new PubSub()
 const storageClient = new Storage()
-
-process.chdir("/tmp")
 
 async function processPubSubMessageOrStorageObject(msg) {
   let data = null
@@ -28,6 +27,9 @@ async function processPubSubMessageOrStorageObject(msg) {
 }
 
 exports.gatsbySharpProcessor = async (msg, context) => {
+  await fs.mkdirp("/tmp/output")
+  process.chdir("/tmp/output")
+
   const event = await processPubSubMessageOrStorageObject(msg)
   try {
     const file = Buffer.from(event.file, "base64")
@@ -36,31 +38,27 @@ exports.gatsbySharpProcessor = async (msg, context) => {
       event.action.operations,
       event.action.pluginOptions
     )
-    const tranforms = await Promise.all(results)
+    const output = await Promise.all(results)
+    const result = { type: "JOB_COMPLETED" }
+    const payload = { id: event.id, files: {}, output }
+    for await (const file of klaw("/tmp/output")) {
+      const data = await fs.readFile(file.path)
+      payload.files[file.path.replace(/^\/tmp\/output\//, "")] = data.toString(
+        "base64"
+      )
+    }
 
-    const result = { type: "JOB_COMPLETED", payload: { id: event.id } }
-
-    let size = 0
-    const output = []
-    await Promise.all(
-      tranforms.map(async t => {
-        const data = await fs.readFile(t.outputPath)
-        size += data.length
-        output.push({ ...t, data: data.toString("base64") })
-      })
-    )
-
+    const size = sizeof(payload)
     if (size > MAX_PUBSUB_RESPONSE_SIZE) {
-      const storageResult = { id: event.id, output }
       await storageClient
         .bucket(`event-results-${event.topic}`)
         .file(`result-${event.id}`)
-        .save(Buffer.from(JSON.stringify(storageResult)), {
+        .save(Buffer.from(JSON.stringify(payload)), {
           resumable: size > MAX_NON_RESUMABLE_SIZE,
         })
-      result.payload.storedResult = `result-${event.id}`
+      result.storedPayload = `result-${event.id}`
     } else {
-      result.payload.output = output
+      result.payload = payload
     }
 
     const resultMsg = Buffer.from(JSON.stringify(result))
