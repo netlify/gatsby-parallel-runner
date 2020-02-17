@@ -42,10 +42,12 @@ exports.gatsbySharpProcessor = async (msg, context) => {
     const result = { type: "JOB_COMPLETED" }
     const payload = { id: event.id, files: {}, output }
     for await (const file of klaw("/tmp/output")) {
-      const data = await fs.readFile(file.path)
-      payload.files[file.path.replace(/^\/tmp\/output\//, "")] = data.toString(
-        "base64"
-      )
+      if (file.isFile()) {
+        const data = await fs.readFile(file.path)
+        payload.files[
+          file.path.replace(/^\/tmp\/output\//, "")
+        ] = data.toString("base64")
+      }
     }
 
     const size = sizeof(payload)
