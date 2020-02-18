@@ -85,14 +85,14 @@ class GooglePubSub {
   async _messageHandler(msg) {
     msg.ack()
     const pubSubMessage = JSON.parse(Buffer.from(msg.data, "base64").toString())
-    const { payload } = pubSubMessage
-    if (payload && payload.storedResult) {
-      payload.output = await this._downloadFromStorage(
+    if (pubSubMessage.storedPayload) {
+      const payload = await this._downloadFromStorage(
         msg.id,
-        payload.storedResult
+        pubSubMessage.storedPayload
       )
+      pubSubMessage.payload = payload
+      delete pubSubMessage.storedPayload
     }
-
     this.subscribers.forEach(handler => handler(pubSubMessage))
   }
 
@@ -115,15 +115,15 @@ class GooglePubSub {
     )
   }
 
-  async _downloadFromStorage(id, storedResult) {
+  async _downloadFromStorage(id, storedPayload) {
     const file = this.storageClient
       .bucket(this.resultBucketName)
-      .file(storedResult)
+      .file(storedPayload)
     await file.download({ destination: `/tmp/result-${id}` })
     const data = (await fs.readFile(`/tmp/result-${id}`)).toString()
-    const output = JSON.parse(data).output
+    const payload = JSON.parse(data)
     await fs.remove(`/tmp/result-${id}`)
-    return output
+    return payload
   }
 }
 

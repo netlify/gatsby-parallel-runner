@@ -14,7 +14,7 @@ exports.process = async function(processor, msg) {
     log.debug("Processing image", file)
     const result = await processor.process({ id: msg.id, args: msg.args, file })
     log.debug("Got output from processing")
-    const output = await Promise.all(
+    await Promise.all(
       result.output.map(async transform => {
         const filePath = path.join(msg.outputDir, transform.outputPath)
         try {
@@ -23,11 +23,13 @@ exports.process = async function(processor, msg) {
           return Promise.reject(`Failed making output directory: ${err}`)
         }
         log.debug("Writing tranform to file")
-        await fs.writeFile(filePath, Buffer.from(transform.data, "base64"))
-        return { outputPath: transform.outputPath, args: transform.args }
+        await fs.writeFile(
+          filePath,
+          Buffer.from(result.files[transform.outputPath], "base64")
+        )
       })
     )
-    return { output }
+    return { output: result.output }
   } catch (err) {
     log.error("Error during processing", err)
     return Promise.reject(err)

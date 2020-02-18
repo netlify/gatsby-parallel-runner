@@ -7,7 +7,6 @@ const { PubSub } = require("@google-cloud/pubsub")
 const { Storage } = require("@google-cloud/storage")
 
 const bucketName = `event-processing-${process.env.WORKER_TOPIC}`
-const resultBucketName = `event-results-${process.env.TOPIC}`
 
 function deployType(type, cwd, config) {
   return new Promise((resolve, reject) => {
