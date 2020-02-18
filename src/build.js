@@ -4,7 +4,9 @@ const cp = require("child_process")
 const log = require("loglevel")
 const path = require("path")
 const { Processor } = require("./processor-queue")
-const { GooglePubSub } = require("./processor-queue/google-pub-sub")
+const {
+  GooglePubSub,
+} = require("./processor-queue/implementations/google-pub-sub")
 const imageProcessor = require("./image-processing")
 
 const MESSAGE_TYPES = {
