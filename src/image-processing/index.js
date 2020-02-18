@@ -29,7 +29,7 @@ exports.process = async function(processor, msg) {
         )
       })
     )
-    return result.output
+    return { output: result.output }
   } catch (err) {
     log.error("Error during processing", err)
     return Promise.reject(err)

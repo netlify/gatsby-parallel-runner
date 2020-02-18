@@ -6,7 +6,6 @@ const { PubSub } = require("@google-cloud/pubsub")
 const { Storage } = require("@google-cloud/storage")
 
 const MAX_PUBSUB_RESPONSE_SIZE = 1024 * 1024 // 5mb
-const MAX_NON_RESUMABLE_SIZE = 1024 * 1024 * 9 // 9mb
 
 const pubSubClient = new PubSub()
 const storageClient = new Storage()
@@ -42,7 +41,7 @@ exports.gatsbySharpProcessor = async (msg, context) => {
     const result = { type: "JOB_COMPLETED" }
     const payload = { id: event.id, files: {}, output }
     for await (const file of klaw("/tmp/output")) {
-      if (file.isFile()) {
+      if (file.stats.isFile()) {
         const data = await fs.readFile(file.path)
         payload.files[
           file.path.replace(/^\/tmp\/output\//, "")
@@ -55,9 +54,7 @@ exports.gatsbySharpProcessor = async (msg, context) => {
       await storageClient
         .bucket(`event-results-${event.topic}`)
         .file(`result-${event.id}`)
-        .save(Buffer.from(JSON.stringify(payload)), {
-          resumable: size > MAX_NON_RESUMABLE_SIZE,
-        })
+        .save(Buffer.from(JSON.stringify(payload)), { resumable: false })
       result.storedPayload = `result-${event.id}`
     } else {
       result.payload = payload
@@ -70,7 +67,7 @@ exports.gatsbySharpProcessor = async (msg, context) => {
       event.id,
       messageId,
       resultMsg.length,
-      result.payload.storedResult
+      result.storedPayload
     )
     await fs.emptyDir("/tmp")
   } catch (err) {

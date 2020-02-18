@@ -115,10 +115,10 @@ class GooglePubSub {
     )
   }
 
-  async _downloadFromStorage(id, storedResult) {
+  async _downloadFromStorage(id, storedPayload) {
     const file = this.storageClient
       .bucket(this.resultBucketName)
-      .file(storedResult)
+      .file(storedPayload)
     await file.download({ destination: `/tmp/result-${id}` })
     const data = (await fs.readFile(`/tmp/result-${id}`)).toString()
     const payload = JSON.parse(data)
