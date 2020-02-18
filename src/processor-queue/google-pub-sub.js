@@ -32,31 +32,12 @@ class GooglePubSub {
       try {
         if (!noSubscription) {
           await this._createSubscription()
+          await this._createBucket()
         }
       } catch (err) {
         return Promise.reject(
           `Failed to start Google PubSub subscriptionn: ${err}`
         )
-      }
-
-      try {
-        const lifeCycle = `<?xml version="1.0" ?>
-        <LifecycleConfiguration>
-            <Rule>
-                <Action>
-                    <Delete/>
-                </Action>
-                <Condition>
-                    <Age>30</Age>
-                </Condition>
-            </Rule>
-        </LifecycleConfiguration>`
-        const [bucket] = await this.storageClient.createBucket(
-          this.resultBucketName
-        )
-        await bucket.setMetadata({ lifeCycle })
-      } catch (err) {
-        log.trace("Create result bucket failed", err)
       }
 
       await fs.ensureFile(topicCreatedFile)
@@ -113,6 +94,28 @@ class GooglePubSub {
     subscription.on("close", err =>
       log.error("Subscription closed unexpectedly", err)
     )
+  }
+
+  async _createBucket() {
+    try {
+      const lifeCycle = `<?xml version="1.0" ?>
+        <LifecycleConfiguration>
+            <Rule>
+                <Action>
+                    <Delete/>
+                </Action>
+                <Condition>
+                    <Age>30</Age>
+                </Condition>
+            </Rule>
+        </LifecycleConfiguration>`
+      const [bucket] = await this.storageClient.createBucket(
+        this.resultBucketName
+      )
+      await bucket.setMetadata({ lifeCycle })
+    } catch (err) {
+      log.trace("Create result bucket failed", err)
+    }
   }
 
   async _downloadFromStorage(id, storedPayload) {
