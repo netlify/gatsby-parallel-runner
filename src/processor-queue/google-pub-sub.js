@@ -56,7 +56,7 @@ class GooglePubSub {
         )
         await bucket.setMetadata({ lifeCycle })
       } catch (err) {
-        console.log("Create result bucket failed", err)
+        log.trace("Create result bucket failed", err)
       }
 
       await fs.ensureFile(topicCreatedFile)

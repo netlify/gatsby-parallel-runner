@@ -30,6 +30,7 @@ exports.gatsbySharpProcessor = async (msg, context) => {
   process.chdir("/tmp/output")
 
   const event = await processPubSubMessageOrStorageObject(msg)
+  console.log("Processing", event.id)
   try {
     const file = Buffer.from(event.file, "base64")
     const results = processFile(
