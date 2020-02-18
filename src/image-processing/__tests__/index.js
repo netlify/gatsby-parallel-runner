@@ -12,11 +12,15 @@ test("test image processor", async () => {
         file: path.join(__dirname, "images", "gatsby-astronaut.png"),
       })
       return {
+        files: {
+          "gatsby-parallel-transformed-image.png": Buffer.from(
+            "bogus data"
+          ).toString("base64"),
+        },
         output: [
           {
             outputPath: "gatsby-parallel-transformed-image.png",
             args: [],
-            data: Buffer.from("bogus data").toString("base64"),
           },
         ],
       }
