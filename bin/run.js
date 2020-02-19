@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 
-const { build } = require('../src/build')
-const { deploy } = require('../src/deploy')
-const { writeFileSync } = require('fs')
+const { build } = require("../src/build")
+const { deploy } = require("../src/deploy")
+const { writeFileSync } = require("fs")
 
-const requiredEnvVars = ['TOPIC', 'WORKER_TOPIC', 'GOOGLE_APPLICATION_CREDENTIALS']
+const requiredEnvVars = [
+  "TOPIC",
+  "WORKER_TOPIC",
+  "GOOGLE_APPLICATION_CREDENTIALS",
+]
 requiredEnvVars.forEach(key => {
   if (!process.env[key]) {
     console.error(`You must set a ${key} environment variable`)
@@ -13,20 +17,23 @@ requiredEnvVars.forEach(key => {
 })
 
 if (!process.env.GOOGLE_APPLICATION_CREDENTIALS.match(/\.json$/)) {
-  const credentialsFile = '/tmp/credentials.json'
+  const credentialsFile = "/tmp/credentials.json"
   let credentials = null
   try {
-    let buff = new Buffer(process.env.GOOGLE_APPLICATION_CREDENTIALS, 'base64')
-    credentials = buff.toString('ascii')
-  } catch(err) {
-    console.error("GOOGLE_APPLICATION_CREDENTIALS must either be a path to a .json file or base 64 encoded json credentials", err)
+    let buff = Buffer.from(process.env.GOOGLE_APPLICATION_CREDENTIALS, "base64")
+    credentials = buff.toString("ascii")
+  } catch (err) {
+    console.error(
+      "GOOGLE_APPLICATION_CREDENTIALS must either be a path to a .json file or base 64 encoded json credentials",
+      err
+    )
     process.exit(1)
   }
   writeFileSync(credentialsFile, credentials)
   process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsFile
 }
 
-if (process.argv.length === 3 && process.argv[2] === 'deploy') {
+if (process.argv.length === 3 && process.argv[2] === "deploy") {
   console.log("Deploying Cloud Worker")
   deploy()
 } else {
