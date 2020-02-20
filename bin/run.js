@@ -35,7 +35,7 @@ if (!process.env.GOOGLE_APPLICATION_CREDENTIALS.match(/\.json$/)) {
 
 if (process.argv.length === 3 && process.argv[2] === "deploy") {
   console.log("Deploying Cloud Worker")
-  deploy()
+  deploy().catch(error => console.error(error))
 } else {
   build()
 }
