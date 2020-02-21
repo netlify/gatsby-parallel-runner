@@ -24,8 +24,6 @@ function deployType(type, cwd, config) {
       config.project_id,
       "--runtime",
       "nodejs10",
-      "--verbosity",
-      "debug",
     ]
     if (type === "PubSub") {
       args.push("--trigger-topic")
