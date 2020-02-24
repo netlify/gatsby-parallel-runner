@@ -1,4 +1,4 @@
-const { GoogleFunctions } = require("../google-functions")
+const { GoogleFunctions } = require("..")
 
 test("instantiate google pubsub", async () => {
   const pubSub = await new GoogleFunctions({ noSubscription: true })

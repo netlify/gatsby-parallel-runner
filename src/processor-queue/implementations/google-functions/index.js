@@ -3,18 +3,21 @@ const { Storage } = require("@google-cloud/storage")
 const fs = require("fs-extra")
 const path = require("path")
 const log = require("loglevel")
+const { topicFor, bucketFor } = require("./utils")
 
 const DEFAULT_MAX_PUB_SUB_SIZE = 1024 * 1024 * 5 // 5 Megabyte
 
-class GooglePubSub {
-  constructor({ maxPubSubSize, noSubscription }) {
+class GoogleFunctions {
+  constructor({ processorSettings, maxPubSubSize, noSubscription }) {
     this.maxPubSubSize = maxPubSubSize || DEFAULT_MAX_PUB_SUB_SIZE
     const config = JSON.parse(
       fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)
     )
-    this.subName = `nf-sub-${new Date().getTime()}`
-    this.bucketName = `event-processing-${process.env.WORKER_TOPIC}`
+    this.subName = `gatsby-sub-${new Date().getTime()}`
+    this.workerBucket = bucketFor(processorSettings)
+    this.workerTopic = topicFor(processorSettings)
     this.resultBucketName = `event-results-${process.env.TOPIC}`
+    this.resultTopic = process.env.TOPIC
     this.pubSubClient = new PubSub({ projectId: config.project_id })
     this.storageClient = new Storage({ projectId: config.project_id })
     this.subscribers = []
@@ -52,12 +55,12 @@ class GooglePubSub {
 
   async publish(id, msg) {
     if (msg.byteLength < this.maxPubSubSize) {
-      log.debug(`Publishing ${id} to pubsub`)
-      await this.pubSubClient.topic(process.env.WORKER_TOPIC).publish(msg)
+      log.debug(`Publishing ${id} to pubsub ${this.workerTopic}`)
+      await this.pubSubClient.topic(this.workerTopic).publish(msg)
     } else {
-      log.debug(`Publishing ${id} to storage`)
+      log.debug(`Publishing ${id} to storage ${this.workerBucket}`)
       await this.storageClient
-        .bucket(this.bucketName)
+        .bucket(this.workerBucket)
         .file(`event-${id}`)
         .save(msg.toString("base64"), { resumable: false })
     }
@@ -80,13 +83,13 @@ class GooglePubSub {
   async _createSubscription() {
     // Creates a new subscription
     try {
-      await this.pubSubClient.createTopic(process.env.TOPIC)
+      await this.pubSubClient.createTopic(this.resultTopic)
     } catch (err) {
-      log.trace("Create topic failed", err)
+      log.trace("Create result topic failed", err)
     }
 
     const [subscription] = await this.pubSubClient
-      .topic(process.env.TOPIC)
+      .topic(this.resultTopic)
       .createSubscription(this.subName)
 
     subscription.on("message", this._messageHandler.bind(this))
@@ -130,4 +133,4 @@ class GooglePubSub {
   }
 }
 
-exports.GooglePubSub = GooglePubSub
+exports.GoogleFunctions = GoogleFunctions

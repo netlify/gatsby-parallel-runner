@@ -4,11 +4,7 @@ const { build } = require("../src/build")
 const { deploy } = require("../src/deploy")
 const { writeFileSync } = require("fs")
 
-const requiredEnvVars = [
-  "TOPIC",
-  "WORKER_TOPIC",
-  "GOOGLE_APPLICATION_CREDENTIALS",
-]
+const requiredEnvVars = ["TOPIC", "GOOGLE_APPLICATION_CREDENTIALS"]
 requiredEnvVars.forEach(key => {
   if (!process.env[key]) {
     console.error(`You must set a ${key} environment variable`)

@@ -3,11 +3,11 @@
 const cp = require("child_process")
 const log = require("loglevel")
 const path = require("path")
-const { Processor } = require("./processor-queue")
+const { ProcessorQueue } = require("./processor-queue")
 const {
-  GooglePubSub,
-} = require("./processor-queue/implementations/google-pub-sub")
-const imageProcessor = require("./image-processing")
+  GoogleFunctions,
+} = require("./processor-queue/implementations/google-functions")
+const { resolveProcessors } = require("./utils")
 
 const MESSAGE_TYPES = {
   LOG_ACTION: `LOG_ACTION`,
@@ -38,7 +38,7 @@ function messageHandler(gatsbyProcess, processors = {}) {
           })
         }
         try {
-          const result = await processor(msg.payload)
+          const result = await processor.process(msg.payload)
           gatsbyProcess.send({
             type: "JOB_COMPLETED",
             payload: {
@@ -68,11 +68,19 @@ exports.build = async function(cmd = "node_modules/.bin/gatsby build") {
 
   process.env.ENABLE_GATSBY_EXTERNAL_JOBS = true
 
-  const pubSubImplementation = await new GooglePubSub({})
-  const processor = new Processor({ pubSubImplementation })
-  const processors = {
-    IMAGE_PROCESSING: imageProcessor.process.bind(imageProcessor, processor),
-  }
+  const processors = {}
+  const processorList = await resolveProcessors()
+  await Promise.all(
+    processorList.map(async processorSettings => {
+      const klass = require(processorSettings.path).Processor
+      const pubSubImplementation = await new GoogleFunctions({
+        processorSettings,
+      })
+      const processorQueue = new ProcessorQueue({ pubSubImplementation })
+
+      processors[processorSettings.key] = new klass(processorQueue)
+    })
+  )
 
   const [bin, ...args] = cmd.split(" ")
   const gatsbyProcess = cp.fork(path.join(process.cwd(), bin), args)

@@ -1,7 +1,6 @@
 const fs = require("fs-extra")
 const sizeof = require("object-sizeof")
 const klaw = require("klaw")
-const { processFile } = require("gatsby-plugin-sharp/process-file")
 const { PubSub } = require("@google-cloud/pubsub")
 const { Storage } = require("@google-cloud/storage")
 
@@ -25,7 +24,7 @@ async function processPubSubMessageOrStorageObject(msg) {
   return JSON.parse(Buffer.from(data, "base64").toString())
 }
 
-exports.gatsbySharpProcessor = async (msg, context) => {
+exports.runTask = async (msg, handler) => {
   await fs.mkdirp("/tmp/output")
   process.chdir("/tmp/output")
 
@@ -33,12 +32,7 @@ exports.gatsbySharpProcessor = async (msg, context) => {
   console.log("Processing", event.id)
   try {
     const file = Buffer.from(event.file, "base64")
-    const results = processFile(
-      file,
-      event.action.operations,
-      event.action.pluginOptions
-    )
-    const output = await Promise.all(results)
+    const output = await handler(file, event)
     const result = { type: "JOB_COMPLETED" }
     const payload = { id: event.id, files: {}, output }
     for await (const file of klaw("/tmp/output")) {

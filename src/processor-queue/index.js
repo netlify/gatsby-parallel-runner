@@ -3,7 +3,7 @@ const { Queue, Job } = require("./queue")
 
 const DEFAULT_MAX_MESSAGE_MEM = 1024 * 1024 * 5 * 10 // 500 megabytes
 
-class Processor {
+class ProcessorQueue {
   constructor({ maxJobTime, maxMessageMem, pubSubImplementation }) {
     this._mem = 0
     this.maxMessageMem = maxMessageMem || DEFAULT_MAX_MESSAGE_MEM
@@ -41,4 +41,4 @@ class Processor {
   }
 }
 
-exports.Processor = Processor
+exports.ProcessorQueue = ProcessorQueue
