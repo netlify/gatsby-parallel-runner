@@ -42,3 +42,36 @@ Then run your Gatsby build with the parallel runner instead of the default `gats
 ```
 npx gatsby-parallel-runner
 ```
+
+## Processor Queues, Processors and Implementations
+
+Gatsby Parallel Runner comes with a set of core abstractions for parallelizing jobs.
+
+The main orchestrator is the Processor Queue that gives invididual processors a simple interface for
+sending jobs to cloud functions and getting back results:
+
+```js
+const result = await queue.process(job)
+```
+
+To do it's job, the ProcessorQueue needs a `pubSubImplementation` that must provide
+`push(msg)` and `subscribe(handler)` methods for enqueuing new jobs and receiving
+results.
+
+Implementations are defined in `src/processor-queue/implementations` and there's currently
+just one of them based on Google's Cloud Functions.
+
+The `src/processors` folder has the different processors that can be triggered via Gatsby's
+external job feature.
+
+The processor folder must be named after the Redux event that should trigger it. Ie, the
+Image Processing processor gets triggered by the sharp plugin via an `IMAGE_PROCESSING` job,
+so the folder is called `image-processing`
+
+Each processor can have a set of implementations based on the Processor Queue implementations
+available.
+
+There's currently just one processor (image-processing), with an implementation for `google-functions`.
+
+When running `npx gatsby-parallel-runner deploy`, the active processor queue implementation will
+make sure to deploy all the cloud function needed for the available processors.
