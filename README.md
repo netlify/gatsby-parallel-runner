@@ -27,7 +27,6 @@ To use with Google Cloud, set relevant env variables in your shell:
 ```
 export GOOGLE_APPLICATION_CREDENTIALS=~/path/to/your/google-credentials.json
 export TOPIC=parallel-runner-topic
-export WORKER_TOPIC=function-worker-topic
 ```
 
 Deploy the cloud function:
