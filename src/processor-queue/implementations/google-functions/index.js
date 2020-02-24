@@ -55,10 +55,10 @@ class GoogleFunctions {
 
   async publish(id, msg) {
     if (msg.byteLength < this.maxPubSubSize) {
-      log.debug(`Publishing ${id} to pubsub`)
+      log.debug(`Publishing ${id} to pubsub ${this.workerTopic}`)
       await this.pubSubClient.topic(this.workerTopic).publish(msg)
     } else {
-      log.debug(`Publishing ${id} to storage`)
+      log.debug(`Publishing ${id} to storage ${this.workerBucket}`)
       await this.storageClient
         .bucket(this.workerBucket)
         .file(`event-${id}`)
