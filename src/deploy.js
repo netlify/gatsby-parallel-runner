@@ -1,10 +1,8 @@
-const {
-  deploy,
-} = require("./processor-queue/implementations/google-pub-sub/deploy")
+const GooglePubSub = require("./processor-queue/implementations/google-functions/deploy")
 
 exports.deploy = async function() {
   try {
-    await deploy()
+    await GooglePubSub.deploy()
   } catch (err) {
     console.error("Failed to deploy parallel functions", err)
     process.exit(1)

@@ -1,10 +1,10 @@
 const path = require("path")
 const fs = require("fs-extra")
-const { process } = require("../index")
+const { Processor } = require("../index")
 
 test("test image processor", async () => {
   await fs.remove("/tmp/gatsby-parallel-transformed-image.png")
-  const mockProcessor = {
+  const mockProcessorQueue = {
     process: jest.fn(async msg => {
       expect(msg).toEqual({
         id: "1234",
@@ -26,7 +26,8 @@ test("test image processor", async () => {
       }
     }),
   }
-  await process(mockProcessor, {
+  const imageProcessor = new Processor(mockProcessorQueue)
+  await imageProcessor.process({
     id: "1234",
     name: "IMAGE_PROCESSING",
     args: [],

@@ -25,7 +25,7 @@ async function processPubSubMessageOrStorageObject(msg) {
   return JSON.parse(Buffer.from(data, "base64").toString())
 }
 
-exports.gatsbySharpProcessor = async (msg, context) => {
+exports.processor = async (msg, context) => {
   await fs.mkdirp("/tmp/output")
   process.chdir("/tmp/output")
 

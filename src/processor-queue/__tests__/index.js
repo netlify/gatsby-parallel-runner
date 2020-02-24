@@ -1,7 +1,7 @@
 "use strict"
 
 const path = require("path")
-const { Processor } = require("../index")
+const { ProcessorQueue } = require("../index")
 const { Job } = require("../queue")
 
 process.env.TOPIC = "test"
@@ -75,7 +75,7 @@ test("process should push a job unto the queue", async () => {
       )
     },
   }
-  const processor = new Processor({ pubSubImplementation })
+  const processor = new ProcessorQueue({ pubSubImplementation })
   const result = await processor.process({
     id: "1234",
     args: [],
@@ -100,7 +100,7 @@ test("failure message should cancel processing", async () => {
       )
     },
   }
-  const processor = new Processor({ pubSubImplementation })
+  const processor = new ProcessorQueue({ pubSubImplementation })
   try {
     await processor.process({
       id: "1234",

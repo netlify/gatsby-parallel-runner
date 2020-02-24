@@ -1,5 +1,6 @@
 const path = require("path")
 const { messageHandler } = require("../build")
+const { resolveProcessors } = require("../utils")
 
 test("test message handler with image processor", async () => {
   expect.assertions(2)
@@ -16,17 +17,19 @@ test("test message handler with image processor", async () => {
   }
 
   const processors = {
-    IMAGE_PROCESSING: jest.fn(async msg => {
-      expect(msg).toEqual({
-        id: "1234",
-        name: "IMAGE_PROCESSING",
-        args: [],
-        inputPaths: [
-          { path: path.join(__dirname, "images", "gatsby-astronaut.png") },
-        ],
-      })
-      return { outputs: [] }
-    }),
+    IMAGE_PROCESSING: {
+      process: jest.fn(async msg => {
+        expect(msg).toEqual({
+          id: "1234",
+          name: "IMAGE_PROCESSING",
+          args: [],
+          inputPaths: [
+            { path: path.join(__dirname, "images", "gatsby-astronaut.png") },
+          ],
+        })
+        return { outputs: [] }
+      }),
+    },
   }
 
   const handler = messageHandler(fakeGatsby, processors)
@@ -58,17 +61,19 @@ test("test message handler with failing image processor", async () => {
   }
 
   const processors = {
-    IMAGE_PROCESSING: jest.fn(async msg => {
-      expect(msg).toEqual({
-        id: "1234",
-        name: "IMAGE_PROCESSING",
-        args: [],
-        inputPaths: [
-          { path: path.join(__dirname, "images", "gatsby-astronaut.png") },
-        ],
-      })
-      return Promise.reject("Error during processing...")
-    }),
+    IMAGE_PROCESSING: {
+      process: jest.fn(async msg => {
+        expect(msg).toEqual({
+          id: "1234",
+          name: "IMAGE_PROCESSING",
+          args: [],
+          inputPaths: [
+            { path: path.join(__dirname, "images", "gatsby-astronaut.png") },
+          ],
+        })
+        return Promise.reject("Error during processing...")
+      }),
+    },
   }
 
   const handler = messageHandler(fakeGatsby, processors)
@@ -108,4 +113,15 @@ test("test message handler with unkown processor", async () => {
       ],
     },
   })
+})
+
+test("resolve processors", async () => {
+  const processors = await resolveProcessors()
+  expect(processors).toEqual([
+    {
+      name: "image-processing",
+      key: "IMAGE_PROCESSING",
+      path: path.join(__dirname, "../processors/image-processing"),
+    },
+  ])
 })

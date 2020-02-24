@@ -1,12 +1,12 @@
-const { GooglePubSub } = require("../google-pub-sub")
+const { GoogleFunctions } = require("../google-functions")
 
 test("instantiate google pubsub", async () => {
-  const pubSub = await new GooglePubSub({ noSubscription: true })
-  expect(pubSub).toBeInstanceOf(GooglePubSub)
+  const pubSub = await new GoogleFunctions({ noSubscription: true })
+  expect(pubSub).toBeInstanceOf(GoogleFunctions)
 })
 
 test("size check for google publish", async () => {
-  const pubSub = await new GooglePubSub({ noSubscription: true })
+  const pubSub = await new GoogleFunctions({ noSubscription: true })
   const msg = Buffer.from("Hello, World!")
   pubSub.maxPubSubSize = 10000
   pubSub.pubSubClient = {
