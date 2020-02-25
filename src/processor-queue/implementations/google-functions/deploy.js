@@ -13,7 +13,7 @@ function deployType(type, processor, cwd, config) {
     const args = [
       "functions",
       "deploy",
-      `processor${processor.name}${type}`,
+      `${topicFor(processor)}-processor${processor.name}${type}`,
       "--entry-point",
       "processor",
       "--memory",
