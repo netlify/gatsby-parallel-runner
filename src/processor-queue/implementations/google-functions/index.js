@@ -44,7 +44,7 @@ class GoogleFunctions {
         }
       } catch (err) {
         return Promise.reject(
-          `Failed to start Google PubSub subscriptionn: ${err}`
+          `Failed to start Google PubSub subscription: ${err}`
         )
       }
 
