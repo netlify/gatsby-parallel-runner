@@ -28,6 +28,8 @@ class GoogleFunctions {
     this.subscribers = []
 
     return (async () => {
+      await this._createSubscription()
+
       const topicCreatedFile = path.join(
         `.cache`,
         `topic-created-${process.env.TOPIC}`
@@ -48,7 +50,6 @@ class GoogleFunctions {
         )
       }
 
-      await this._createSubscription()
       await fs.ensureFile(topicCreatedFile)
 
       return this
