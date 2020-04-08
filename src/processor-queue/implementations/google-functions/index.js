@@ -39,7 +39,6 @@ class GoogleFunctions {
 
       try {
         if (!noSubscription) {
-          await this._createSubscription()
           await this._createBucket()
         }
       } catch (err) {
@@ -48,6 +47,7 @@ class GoogleFunctions {
         )
       }
 
+      await this._createSubscription()
       await fs.ensureFile(topicCreatedFile)
 
       return this
