@@ -39,6 +39,7 @@ class GoogleFunctions {
 
       try {
         if (!noSubscription) {
+          await this._createTopic()
           await this._createBucket()
         }
       } catch (err) {
@@ -85,14 +86,16 @@ class GoogleFunctions {
     this.subscribers.forEach(handler => handler(pubSubMessage))
   }
 
-  async _createSubscription() {
-    // Creates a new subscription
+  async _createTopic() {
     try {
       await this.pubSubClient.createTopic(this.resultTopic)
     } catch (err) {
       log.trace(`Create result topic failed`, err)
     }
+  }
 
+  async _createSubscription() {
+    // Creates a new subscription
     const [subscription] = await this.pubSubClient
       .topic(this.resultTopic)
       .createSubscription(this.subName)
