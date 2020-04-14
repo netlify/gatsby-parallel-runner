@@ -28,12 +28,8 @@ class GoogleFunctions {
     this.subscribers = []
 
     return (async () => {
-      try {
-        await this._createSubscription()
-      } catch (err) {
-        return Promise.reject(
-          `Failed to start Google PubSub subscription: ${err}`
-        )
+      if (noSubscription) {
+        return
       }
 
       const topicCreatedFile = path.join(
@@ -41,15 +37,13 @@ class GoogleFunctions {
         `topic-created-${process.env.TOPIC}`
       )
       const exists = await fs.pathExists(topicCreatedFile)
-      if (exists) {
-        return this
-      }
 
       try {
-        if (!noSubscription) {
+        if (!exists) {
           await this._createTopic()
           await this._createBucket()
         }
+        await this._createSubscription()
       } catch (err) {
         return Promise.reject(
           `Failed to setup Google PubSub topic and bucket: ${err}`
@@ -90,7 +84,7 @@ class GoogleFunctions {
       pubSubMessage.payload = payload
       delete pubSubMessage.storedPayload
     }
-    this.subscribers.forEach(handler => handler(pubSubMessage))
+    this.subscribers.forEach((handler) => handler(pubSubMessage))
   }
 
   async _createTopic() {
@@ -108,8 +102,10 @@ class GoogleFunctions {
       .createSubscription(this.subName)
 
     subscription.on(`message`, this._messageHandler.bind(this))
-    subscription.on(`error`, err => log.error(`Error from subscription: `, err))
-    subscription.on(`close`, err =>
+    subscription.on(`error`, (err) =>
+      log.error(`Error from subscription: `, err)
+    )
+    subscription.on(`close`, (err) =>
       log.error(`Subscription closed unexpectedly`, err)
     )
   }
