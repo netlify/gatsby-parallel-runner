@@ -28,7 +28,13 @@ class GoogleFunctions {
     this.subscribers = []
 
     return (async () => {
-      await this._createSubscription()
+      try {
+        await this._createSubscription()
+      } catch (err) {
+        return Promise.reject(
+          `Failed to start Google PubSub subscription: ${err}`
+        )
+      }
 
       const topicCreatedFile = path.join(
         `.cache`,
@@ -46,7 +52,7 @@ class GoogleFunctions {
         }
       } catch (err) {
         return Promise.reject(
-          `Failed to start Google PubSub subscription: ${err}`
+          `Failed to setup Google PubSub topic and bucket: ${err}`
         )
       }
 
