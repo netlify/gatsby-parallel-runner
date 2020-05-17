@@ -13,10 +13,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/gatsbyjs/gatsby.git",
-    "directory": "packages/gatsby-parallel-runner"
+    "url": "https://github.com/netlify/gatsby-parallel-runner.git",
   },
-  "homepage": "https://github.com/gatsbyjs/gatsby/tree/master/packages/gatsby-parallel-runner#readme",
+  "homepage": "https://github.com/netlify/gatsby-parallel-runner/",
   "dependencies": {
     "@google-cloud/pubsub": "^0.29.1",
     "@google-cloud/storage": "^4.3.0",
