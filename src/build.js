@@ -69,6 +69,7 @@ exports.build = async function(cmd = `node_modules/.bin/gatsby build`) {
   log.setLevel(process.env.PARALLEL_RUNNER_LOG_LEVEL || `warn`)
 
   process.env.ENABLE_GATSBY_EXTERNAL_JOBS = true
+  process.env.GATSBY_EXPERIMENTAL_PAGE_BUILD_ON_DATA_CHANGES = true
 
   const processors = {}
   const processorList = await resolveProcessors()
