@@ -9,7 +9,7 @@ const {
 } = require(`./processor-queue/implementations/google-functions`)
 const { resolveProcessors } = require(`./utils`)
 
-const gatsbyPrefixPaths = process.argv['--prefix-paths']
+const gatsbyPrefixPaths = process.argv[' --prefix-paths'] ? '--prefix-paths' : ''
 
 const MESSAGE_TYPES = {
   LOG_ACTION: `LOG_ACTION`,
@@ -67,7 +67,7 @@ function messageHandler(gatsbyProcess, processors = {}) {
   }
 }
 
-exports.build = async function (cmd = `node_modules/.bin/gatsby build${gatsbyPrefixPaths ? ' --prefix-paths' : ''}`) {
+exports.build = async function (cmd = `node_modules/.bin/gatsby build${gatsbyPrefixPaths}`) {
   log.setLevel(process.env.PARALLEL_RUNNER_LOG_LEVEL || `warn`)
 
   process.env.ENABLE_GATSBY_EXTERNAL_JOBS = true
