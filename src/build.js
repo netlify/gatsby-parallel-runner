@@ -9,6 +9,8 @@ const {
 } = require(`./processor-queue/implementations/google-functions`)
 const { resolveProcessors } = require(`./utils`)
 
+const gatsbyPrefixPaths = process.argv['--prefix-paths']
+
 const MESSAGE_TYPES = {
   LOG_ACTION: `LOG_ACTION`,
   JOB_CREATED: `JOB_CREATED`,
@@ -21,7 +23,7 @@ const MESSAGE_TYPES = {
 }
 
 function messageHandler(gatsbyProcess, processors = {}) {
-  return async function(msg) {
+  return async function (msg) {
     if (
       log.getLevel() <= log.levels.TRACE &&
       msg.type !== MESSAGE_TYPES.LOG_ACTION
@@ -65,7 +67,7 @@ function messageHandler(gatsbyProcess, processors = {}) {
   }
 }
 
-exports.build = async function(cmd = `node_modules/.bin/gatsby build`) {
+exports.build = async function (cmd = `node_modules/.bin/gatsby build${gatsbyPrefixPaths ? ' --prefix-paths' : ''}`) {
   log.setLevel(process.env.PARALLEL_RUNNER_LOG_LEVEL || `warn`)
 
   process.env.ENABLE_GATSBY_EXTERNAL_JOBS = true
