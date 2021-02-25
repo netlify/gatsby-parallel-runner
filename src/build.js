@@ -9,7 +9,7 @@ const {
 } = require(`./processor-queue/implementations/google-functions`)
 const { resolveProcessors } = require(`./utils`)
 
-const gatsbyPrefixPaths = process.argv[' --prefix-paths'] ? '--prefix-paths' : ''
+const gatsbyPrefixPaths = process.argv['--prefix-paths'] ? ' --prefix-paths' : ''
 
 const MESSAGE_TYPES = {
   LOG_ACTION: `LOG_ACTION`,
