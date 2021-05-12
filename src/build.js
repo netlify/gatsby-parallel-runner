@@ -3,6 +3,7 @@
 const cp = require(`child_process`)
 const log = require(`loglevel`)
 const path = require(`path`)
+const { env } = require('process')
 const { ProcessorQueue } = require(`./processor-queue`)
 const {
   GoogleFunctions,
@@ -86,7 +87,7 @@ exports.build = async function (cmd = `node_modules/.bin/gatsby build`) {
   )
 
   const [bin, ...args] = cmd.split(` `)
-  const gatsbyProcess = cp.fork(path.join(process.cwd(), bin), args.concat(process.argv.slice(2)))
+  const gatsbyProcess = cp.fork(path.join(process.cwd(), bin), args.concat(process.argv.slice(2)), env)
   gatsbyProcess.on(`exit`, async code => {
     log.debug(`Gatsby existed with`, code)
     process.exit(code)
