@@ -4,6 +4,7 @@ const { build } = require("../src/build")
 const { deploy } = require("../src/deploy")
 const { writeFileSync } = require("fs")
 
+
 const requiredEnvVars = [
   "TOPIC",
   "WORKER_TOPIC",
