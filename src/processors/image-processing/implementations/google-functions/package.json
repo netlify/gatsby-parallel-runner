@@ -12,7 +12,7 @@
     "@google-cloud/pubsub": "^1.4.1",
     "@google-cloud/storage": "^4.3.0",
     "fs-extra": "^8.1.0",
-    "gatsby-plugin-sharp": "^2.4.5",
+    "gatsby-plugin-sharp": "^2.14.4",
     "klaw": "^3.0.0",
     "object-sizeof": "^1.5.2"
   }
